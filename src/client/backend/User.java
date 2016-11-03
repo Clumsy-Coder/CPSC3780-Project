@@ -27,6 +27,11 @@ public final class User implements Serializable
      */
     private String  lastName;
 
+    /**
+     * In order to be able to send object through a network
+     */
+    private static final long serialVersionUID = -3529564406812045479L;
+
     //CONSTRUCTORS
 
     /**
