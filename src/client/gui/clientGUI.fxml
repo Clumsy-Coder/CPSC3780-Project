@@ -1,29 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.jfoenix.controls.JFXButton?>
 <?import com.jfoenix.controls.JFXListView?>
+<?import com.jfoenix.controls.JFXTextArea?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.SplitPane?>
-<SplitPane dividerPositions="0.29797979797979796"
-           maxHeight="-Infinity"
-           maxWidth="-Infinity"
-           minHeight="-Infinity"
-           minWidth="-Infinity"
-           prefHeight="400.0"
-           prefWidth="600.0"
-           xmlns="http://javafx.com/javafx/8.0.112-ea"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="client.gui.ClientChatController">
-	<items>
+<?import javafx.scene.layout.BorderPane?>
+<BorderPane xmlns="http://javafx.com/javafx/8.0.112-ea"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="client.gui.ClientChatController">
+	<left>
 		<ScrollPane fitToHeight="true"
 		            fitToWidth="true">
 			<content>
 				<JFXListView fx:id="userList"/>
 			</content>
 		</ScrollPane>
-		<ScrollPane fitToWidth="true">
-			<content>
-				<JFXListView fx:id="conversationList"/>
-			</content>
-		</ScrollPane>
-	</items>
-</SplitPane>
+	</left>
+	<right>
+		<BorderPane>
+			<center>
+				<ScrollPane fitToWidth="true">
+					<content>
+						<JFXListView fx:id="conversationList"/>
+					</content>
+				</ScrollPane>
+			</center>
+			<bottom>
+				<BorderPane>
+					<padding>
+						<Insets bottom="5"
+						        top="1"/>
+					</padding>
+					<center>
+						<JFXTextArea fx:id="textArea"
+						             maxHeight="92"
+						             maxWidth="450"
+						             promptText="Type message"
+						             disable="true">
+						</JFXTextArea>
+					</center>
+					<right>
+						<JFXButton fx:id="sendBtn"
+						           alignment="CENTER"
+						           buttonType="FLAT"
+						           disable="true"
+						           maxHeight="1.7976931348623157E308"
+						           maxWidth="110.0"
+						           ripplerFill="#4059a9"
+						           text="Send"
+						           textAlignment="CENTER">
+						</JFXButton>
+					</right>
+				</BorderPane>
+			</bottom>
+		</BorderPane>
+	</right>
+</BorderPane>
