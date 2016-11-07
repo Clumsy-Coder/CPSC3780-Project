@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXButton?>
+<?import com.jfoenix.controls.JFXListView?>
+<?import com.jfoenix.controls.JFXTextArea?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import com.jfoenix.controls.JFXDialog?>
+<?import com.jfoenix.controls.JFXDialogLayout?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+<?import com.jfoenix.controls.JFXTextField?>
+<StackPane fx:id="stackPane"
+           xmlns="http://javafx.com/javafx/8.0.112-ea"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="client.gui.ClientChatController">
+	<BorderPane
+	            >
+		<left>
+			<ScrollPane fitToHeight="true"
+			            fitToWidth="true">
+				<content>
+					<JFXListView fx:id="userList"/>
+				</content>
+			</ScrollPane>
+		</left>
+		<right>
+			<BorderPane>
+				<center>
+					<ScrollPane fitToWidth="true">
+						<content>
+							<JFXListView fx:id="conversationList"/>
+						</content>
+					</ScrollPane>
+				</center>
+				<bottom>
+					<BorderPane>
+						<padding>
+							<Insets bottom="5"
+							        top="1"/>
+						</padding>
+						<center>
+							<JFXTextArea fx:id="textArea"
+							             maxHeight="92"
+							             maxWidth="450"
+							             promptText="Type message"
+							             disable="true">
+							</JFXTextArea>
+						</center>
+						<right>
+							<JFXButton fx:id="sendBtn"
+							           alignment="CENTER"
+							           buttonType="FLAT"
+							           disable="true"
+							           maxHeight="1.7976931348623157E308"
+							           maxWidth="110.0"
+							           ripplerFill="#4059a9"
+							           text="Send"
+							           textAlignment="CENTER">
+							</JFXButton>
+						</right>
+					</BorderPane>
+				</bottom>
+			</BorderPane>
+		</right>
+	</BorderPane>
+	
+	<JFXDialog fx:id="setupDialog">
+		<JFXDialogLayout>
+			<heading>
+				<Label>Setup</Label>
+			</heading>
+			<body>
+				<VBox spacing="10">
+					<JFXTextField fx:id="username"
+					              promptText="Username"
+					              maxWidth="20">
+					
+					</JFXTextField>
+					<JFXTextField fx:id="firstName"
+					              promptText="First name"
+					              maxWidth="20">
+					
+					</JFXTextField>
+					<JFXTextField fx:id="lastname"
+					              promptText="Last name"
+					              maxWidth="20">
+					
+					</JFXTextField>
+					<JFXTextField fx:id="serverIP"
+					              promptText="Server IP address"
+					              maxWidth="20">
+					
+					</JFXTextField>
+				</VBox>
+			</body>
+			<actions>
+				<JFXButton fx:id="connectBtn">Connect</JFXButton>
+			</actions>
+		</JFXDialogLayout>
+	</JFXDialog>
+</StackPane>
