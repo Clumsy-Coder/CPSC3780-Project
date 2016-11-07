@@ -1,6 +1,4 @@
-package client.gui;/**
- * Created by Umar on 2016-11-03.
- */
+package client.gui;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -8,6 +6,9 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
+/**
+ * Class used for initialzing the Client Chat GUI
+ */
 public class ClientChatMain extends Application
 {
 
@@ -20,7 +21,7 @@ public class ClientChatMain extends Application
 	public void start(Stage primaryStage) throws
 	                                      Exception
 	{
-		Parent root = FXMLLoader.load(getClass().getResource("clientGUI.fxml"));
+		Parent root = FXMLLoader.load(getClass().getResource("resource/clientGUI.fxml"));
 		primaryStage.setTitle("Client Chat");
 		primaryStage.setScene(new Scene(root, 750, 500));
 		primaryStage.setResizable(false);
