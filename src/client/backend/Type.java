@@ -6,8 +6,9 @@ package client.backend;
  * GET: for retrieving a message<br>
  * ACK: for acknowledging a message has been recieved<br>
  * USER: for sending information about what user is connected to the server.
+ * DISCONNECT: for notifying the server the client will be disconnecting
  */
 public enum Type
 {
-    SEND, GET, ACK, USER
+    SEND, GET, ACK, USER, DISCONNECT
 }

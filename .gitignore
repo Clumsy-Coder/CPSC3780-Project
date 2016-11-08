@@ -1,0 +1,20 @@
+*.iml
+.gradle
+/local.properties
+
+.DS_Store
+/build
+/captures
+/out
+
+# idea project files
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/.name
+.idea/libraries/
+.idea/gradle.xml
+*.ids
+.idea/codeStyleSettings.xml
+*.iml
+*.ipr
+*.iws
