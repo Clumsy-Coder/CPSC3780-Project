@@ -53,7 +53,7 @@ public class Client
 
 	protected void sendMessage(String textMessage, User destionation)
 	{
-		Message message = new Message(user, MessageType.SEND, user, destionation, textMessage);
+		Message message = new Message(MessageType.SEND, user, destionation, textMessage);
 		//send the message to the server
 	}
 

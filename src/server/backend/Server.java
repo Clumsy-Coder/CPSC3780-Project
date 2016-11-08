@@ -1,6 +1,7 @@
 package server.backend;
 
 import client.backend.Message;
+import client.backend.MessageType;
 import client.backend.User;
 
 import java.io.IOException;
@@ -65,7 +66,7 @@ public class Server
 		Vector<Message> userMessages = new Vector<Message>();
 		for (Message curMessage : messageBuffer)
 		{
-			if (curMessage.getUser().getUsername().equals(user.getUsername()))
+			if (curMessage.getDestination().getUsername().equals(user.getUsername()))
 			{
 				userMessages.add(curMessage);
 			}
@@ -223,6 +224,7 @@ public class Server
 
 						try
 						{
+
 							sOutput.writeObject(findMessages(msg.getSource()));
 						}
 						catch (IOException e)

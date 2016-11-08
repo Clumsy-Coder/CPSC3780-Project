@@ -17,7 +17,6 @@ public class Message implements Serializable
 	 */
 	private BigInteger  sequenceNumber;
 	private MessageType messageType;
-	private User        user;
 	private User        source;
 	private User        destination;
 	private Object      payload;        //NULL allowed. either send a String message, or user info
@@ -31,15 +30,13 @@ public class Message implements Serializable
 	/**
 	 * Default constructor used for creating a message
 	 *
-	 * @param user        The sender's information
 	 * @param messageType The type of message, SEND, GET, ACK, USER
 	 * @param source      The source IP address
 	 * @param destination The destination IP address
 	 * @param payload     The message.
 	 */
-	public Message(User user, MessageType messageType, User source, User destination, Object payload)
+	public Message(MessageType messageType, User source, User destination, Object payload)
 	{
-		this.user           = user;
 		this.messageType    = messageType;
 		this.source         = source;
 		this.destination    = destination;
@@ -56,16 +53,6 @@ public class Message implements Serializable
 	public MessageType getMessageType()
 	{
 		return messageType;
-	}
-
-	/**
-	 * Returns the user information of the sender
-	 *
-	 * @return
-	 */
-	public User getUser()
-	{
-		return user;
 	}
 
 	/**
