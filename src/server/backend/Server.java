@@ -35,20 +35,7 @@ public class Server
 	{
 		for(int i = 0; i < clientThreadList.size(); i++)
 		{
-			if(clientThreadList.get(i).getUser() == user)
-			{
-				return clientThreadList.get(i);
-			}
-		}
-
-		return null;
-	}
-
-	private ClientThread findUser(String username)
-	{
-		for(int i = 0; i < clientThreadList.size(); i++)
-		{
-			if(clientThreadList.get(i).getUser().getUsername() == username)
+			if(clientThreadList.get(i).getUser().getUsername().equals(user.getUsername()))
 			{
 				return clientThreadList.get(i);
 			}
