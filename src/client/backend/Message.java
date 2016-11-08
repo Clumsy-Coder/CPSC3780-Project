@@ -97,4 +97,13 @@ public class Message implements Serializable
 	{
 		return payload;
 	}
+
+	/**
+	 * Returns the sequence number
+	 * @return
+	 */
+	public BigInteger getSequenceNumber()
+	{
+		return sequenceNumber;
+	}
 }
