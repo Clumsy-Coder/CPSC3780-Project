@@ -64,7 +64,7 @@ public class Server
 		{
 			//if current message has the matching sequence number and sender
 			if(messageBuffer.get(i).getSequenceNumber() == message.getSequenceNumber() &&
-			   messageBuffer.get(i).getSource().getUsername() == message.getSource().getUsername())
+			   messageBuffer.get(i).getSource().getUsername().equals(message.getSource().getUsername()))
 			{
 				messageBuffer.remove(i);
 				return i;
@@ -201,7 +201,7 @@ public class Server
 						//store the message in messageBuffer vector
 						messageBuffer.add(msg);
 						break;
-					}
+					}//END case SEND
 					//if client B is requesting messages destined to client B (receiver)
 					case GET:
 					{
@@ -210,7 +210,7 @@ public class Server
 						//sort them by sequence for each group
 						//send the message/s
 						break;
-					}
+					}//END case GET
 					//if client B is acknowledging message has been received
 					case ACK:
 					{
@@ -230,18 +230,18 @@ public class Server
 						removeMessage(msg);
 
 						break;
-					}
+					}//END case ACK
 					//if a server is sending information about the userList vector
 					//  usually when a new client has connected or
 					//  a client has disconnected.
-					//TODO implement when a message is recieved with a USERS messageType
+					//TODO implement when a message is received with a USERS messageType
 					case USERS:
 					{
 						//update the userList
 						//broadcast the message to the connected clients/servers other than the one
 						//it came from.
 						break;
-					}
+					}//END case USERS
 					//if client A is disconnecting the server.
 					case DISCONNECT:
 					{
@@ -249,7 +249,7 @@ public class Server
 						//remove from the userList
 						//broadcast the updated userList to all connected clients/servers
 						break;
-					}
+					}//END case DISCONNECT
 				}//END switch(msg.getMEssageType())
 			}//END while(keepGoing)
 		}//END METHOD run()
@@ -276,10 +276,6 @@ public class Server
 
 			sOutput.writeObject(message);
 			return true;
-		}
-
-
+		}//END METHOD writeMsg(String)
 	}//END INNER CLASS ClientThread
-
-
-}
+}//END CLASS Server
