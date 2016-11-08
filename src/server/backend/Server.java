@@ -1,6 +1,7 @@
 package server.backend;
 
 import client.backend.Message;
+import client.backend.Type;
 import client.backend.User;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ public class Server
 	private boolean              keepGoing;
 	private Vector<ClientThread> clientThreadList;
 	private Vector<Message>      messageBuffer;
+	private Message              msg;
 
 	Server(int port)
 	{
@@ -131,6 +133,66 @@ public class Server
 			//          remove from userList.
 			//          broadcast the updated userList.
 
+			boolean keepGoing = true;
+			while (keepGoing)
+			{
+				try
+				{
+					msg = (Message) sInput.readObject();
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+				catch (ClassNotFoundException e)
+				{
+					e.printStackTrace();
+				}
+
+				switch(msg.getMessageType())
+				{
+					//if client A is sending a message to client B
+					case SEND:
+					{
+						//store the message in messageBuffer vector
+						break;
+					}
+					//if client B is requesting messages destined to client B (receiver)
+					case GET:
+					{
+						//find all the messages destined to client B
+						//group them by the sender
+						//sort them by sequence for each group
+						//send the message/s
+						break;
+					}
+					//if client B is acknowledging message has been received
+					case ACK:
+					{
+						//forwardd the ACK message to client A (original sender)
+						//remove message from messageBuffer
+						break;
+					}
+					//if a server is sending information about the userList vector
+					//  usually when a new client has connected or
+					//  a client has disconnected.
+					case USERS:
+					{
+						//update the userList
+						//broadcast the message to the connected clients/servers other than the one
+						//it came from.
+						break;
+					}
+					//if client A is disconnecting the server.
+					case DISCONNECT:
+					{
+						//disconnect the client
+						//remove from the userList
+						//broadcast the updated userList to all connected clients/servers
+						break;
+					}
+				}//END switch(msg.getMEssageType())
+			}//END while(keepGoing)
 		}//END METHOD run()
 
 		//TODO catch exceptions and handle them
@@ -142,10 +204,11 @@ public class Server
 			socket.close();
 		}
 
-		//TODO implement the proper writeMEssage
+		//TODO implement the proper writeMessage
 		private boolean writeMsg(String message) throws
 		                                         IOException
 		{
+			//check if the client is still connected.
 			if (!socket.isConnected())
 			{
 				close();
