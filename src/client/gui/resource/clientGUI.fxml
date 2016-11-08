@@ -1,23 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.jfoenix.controls.JFXButton?>
-<?import com.jfoenix.controls.JFXListView?>
-<?import com.jfoenix.controls.JFXTextArea?>
+<?import com.jfoenix.controls.*?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.StackPane?>
-<?import com.jfoenix.controls.JFXDialog?>
-<?import com.jfoenix.controls.JFXDialogLayout?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.VBox?>
-<?import com.jfoenix.controls.JFXTextField?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
 <StackPane fx:id="stackPane"
            xmlns="http://javafx.com/javafx/8.0.112-ea"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="client.gui.ClientChatController">
 	<BorderPane
-	            >
+	>
 		<left>
 			<ScrollPane fitToHeight="true"
 			            fitToWidth="true">
@@ -76,28 +70,28 @@
 				<VBox spacing="10">
 					<JFXTextField fx:id="username"
 					              promptText="Username"
-					              maxWidth="20">
-					
+					              >Username
 					</JFXTextField>
-					<JFXTextField fx:id="firstName"
+					<JFXTextField fx:id="firstname"
 					              promptText="First name"
-					              maxWidth="20">
-					
+					              >Firstname
 					</JFXTextField>
 					<JFXTextField fx:id="lastname"
 					              promptText="Last name"
-					              maxWidth="20">
+					              >Lastname
 					
 					</JFXTextField>
 					<JFXTextField fx:id="serverIP"
 					              promptText="Server IP address"
-					              maxWidth="20">
-					
+					              >Server IP Address
 					</JFXTextField>
 				</VBox>
 			</body>
 			<actions>
-				<JFXButton fx:id="connectBtn">Connect</JFXButton>
+				<HBox>
+					<Text fx:id="errorMessage"></Text>
+					<JFXButton fx:id="connectBtn" onAction="#clientSetup">Connect</JFXButton>
+				</HBox>
 			</actions>
 		</JFXDialogLayout>
 	</JFXDialog>
