@@ -8,7 +8,7 @@ package client.backend;
  * USERS: for sending information about what user is connected to the server.
  * DISCONNECT: for notifying the server the client will be disconnecting
  */
-public enum Type
+public enum MessageType
 {
     SEND, GET, ACK, USERS, DISCONNECT
 }

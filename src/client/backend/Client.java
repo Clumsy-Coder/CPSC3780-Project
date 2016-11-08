@@ -1,9 +1,5 @@
 package client.backend;
 
-import client.backend.Message;
-import client.backend.Type;
-import client.backend.User;
-
 import java.util.ArrayList;
 
 /**
@@ -57,7 +53,7 @@ public class Client
 
 	protected void sendMessage(String textMessage, User destionation)
 	{
-		Message message = new Message(user, Type.SEND, user, destionation, textMessage);
+		Message message = new Message(user, MessageType.SEND, user, destionation, textMessage);
 		//send the message to the server
 	}
 

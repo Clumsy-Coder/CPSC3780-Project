@@ -15,12 +15,12 @@ public class Message implements Serializable
 	/**
 	 *
 	 */
-	private BigInteger sequenceNumber;
-	private Type       messageType;
-	private User       user;
-	private User       source;
-	private User       destination;
-	private Object     payload;        //NULL allowed. either send a String message, or user info
+	private BigInteger  sequenceNumber;
+	private MessageType messageType;
+	private User        user;
+	private User        source;
+	private User        destination;
+	private Object      payload;        //NULL allowed. either send a String message, or user info
 	/**
 	 * In order to be able to send object through a network
 	 */
@@ -37,7 +37,7 @@ public class Message implements Serializable
 	 * @param destination The destination IP address
 	 * @param payload     The message.
 	 */
-	public Message(User user, Type messageType, User source, User destination, Object payload)
+	public Message(User user, MessageType messageType, User source, User destination, Object payload)
 	{
 		this.user           = user;
 		this.messageType    = messageType;
@@ -53,7 +53,7 @@ public class Message implements Serializable
 	 *
 	 * @return
 	 */
-	public Type getMessageType()
+	public MessageType getMessageType()
 	{
 		return messageType;
 	}
