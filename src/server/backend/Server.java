@@ -31,6 +31,49 @@ public class Server
 		messageBuffer = new Vector<Message>();
 	}
 
+	private ClientThread findUser(User user)
+	{
+		for(int i = 0; i < clientThreadList.size(); i++)
+		{
+			if(clientThreadList.get(i).getUser() == user)
+			{
+				return clientThreadList.get(i);
+			}
+		}
+
+		return null;
+	}
+
+	private ClientThread findUser(String username)
+	{
+		for(int i = 0; i < clientThreadList.size(); i++)
+		{
+			if(clientThreadList.get(i).getUser().getUsername() == username)
+			{
+				return clientThreadList.get(i);
+			}
+		}
+
+		return null;
+	}
+
+	private int removeMessage(Message message)
+	{
+		//find the message based on the sequence number AND the sender
+		for(int i = 0; i < messageBuffer.size(); i++)
+		{
+			//if current message has the matching sequence number and sender
+			if(messageBuffer.get(i).getSequenceNumber() == message.getSequenceNumber() &&
+			   messageBuffer.get(i).getSource().getUsername() == message.getSource().getUsername())
+			{
+				messageBuffer.remove(i);
+				return i;
+			}
+		}
+		//if message cannot be found
+		return -1;
+	}
+
 	public void startServer() throws
 	                          IOException,
 	                          ClassNotFoundException
@@ -104,6 +147,7 @@ public class Server
 			sInput = new ObjectInputStream(socket.getInputStream());
 			//the first thing is the user object information.
 			user = (User) sInput.readObject();
+			System.out.println("User: " + user.getUsername() + " connected.");
 
 		}
 
@@ -155,6 +199,7 @@ public class Server
 					case SEND:
 					{
 						//store the message in messageBuffer vector
+						messageBuffer.add(msg);
 						break;
 					}
 					//if client B is requesting messages destined to client B (receiver)
@@ -169,13 +214,27 @@ public class Server
 					//if client B is acknowledging message has been received
 					case ACK:
 					{
-						//forwardd the ACK message to client A (original sender)
-						//remove message from messageBuffer
+						//forward the ACK message to client A (original sender)
+						//remove message from messageBuffer. Based on sender and sequence number
+
+						ClientThread destination = findUser(msg.getDestination().getUsername());
+						try
+						{
+							destination.sOutput.writeObject(msg);
+						}
+						catch (IOException e)
+						{
+							e.printStackTrace();
+						}
+
+						removeMessage(msg);
+
 						break;
 					}
 					//if a server is sending information about the userList vector
 					//  usually when a new client has connected or
 					//  a client has disconnected.
+					//TODO implement when a message is recieved with a USERS messageType
 					case USERS:
 					{
 						//update the userList
