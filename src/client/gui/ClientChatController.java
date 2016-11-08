@@ -26,9 +26,16 @@ public class ClientChatController implements Initializable
 	private JFXListView<Label> userList;
 	@FXML
 	private JFXListView<Label> conversationList;
-
 	@FXML
 	private StackPane stackPane;
+	@FXML
+	private JFXTextField username;
+	@FXML
+	private JFXTextField firstname;
+	@FXML
+	private JFXTextField lastname;
+	@FXML
+	private JFXTextField serverIP;
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources)
@@ -41,8 +48,7 @@ public class ClientChatController implements Initializable
 		content.setHeading(new Text("Setup"));
 		VBox vbox = new VBox(10);
 		vbox.getChildren()
-				.addAll(new JFXTextField("Username"), new JFXTextField("Firstname"), new JFXTextField("Lastname"),
-				        new JFXTextField("Server IP"));
+				.addAll(username, firstname, lastname, serverIP);
 		content.setBody(vbox);
 		JFXDialog dialog = new JFXDialog(stackPane, content, JFXDialog.DialogTransition.CENTER);
 		JFXButton button = new JFXButton("Connect");
@@ -51,21 +57,16 @@ public class ClientChatController implements Initializable
 			@Override
 			public void handle(ActionEvent event)
 			{
+				System.out.println("Username: " + username.getText());
+				System.out.println("Firstname: " + firstname.getText());
+				System.out.println("Lastname: " + lastname.getText());
+				System.out.println("ServerIP: " + serverIP.getText());
 				dialog.close();
 			}
 		});
 
 		content.setActions(button);
 		dialog.show();
-
-//			JFXDialogLayout dialogBoxLayout = FXMLLoader.load(getClass().getResource("resource/dialog.fxml"));
-//			JFXDialog       dialogBox       = new JFXDialog(new StackPane(), dialogBoxLayout,/*
-//			                                                JFXDialog.DialogTransition.CENTER);*/
-//			JFXDialog dialogBox = new JFXDialog();
-//
-//			dialogBox.setContent(dialogBoxLayout);
-//			dialogBox.setTransitionType(JFXDialog.DialogTransition.CENTER);
-//			dialogBox.show();
 
 		for (int i = 0; i < 20; i++)
 		{
@@ -77,5 +78,14 @@ public class ClientChatController implements Initializable
 //		conversationList.setItems(FXCollections.observableArrayList(users));
 
 
+	}
+
+	@FXML
+	public void clientSetup(ActionEvent event)
+	{
+		System.out.println("Username: " + username);
+		System.out.println("Firstname: " + firstname);
+		System.out.println("Lastname: " + lastname);
+		System.out.println("ServerIP: " + serverIP);
 	}
 }
