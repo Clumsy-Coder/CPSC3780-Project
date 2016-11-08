@@ -1,7 +1,6 @@
 package server.backend;
 
 import client.backend.Message;
-import client.backend.Type;
 import client.backend.User;
 
 import java.io.IOException;
@@ -33,9 +32,9 @@ public class Server
 
 	private ClientThread findUser(User user)
 	{
-		for(int i = 0; i < clientThreadList.size(); i++)
+		for (int i = 0; i < clientThreadList.size(); i++)
 		{
-			if(clientThreadList.get(i).getUser().getUsername().equals(user.getUsername()))
+			if (clientThreadList.get(i).getUser().getUsername().equals(user.getUsername()))
 			{
 				return clientThreadList.get(i);
 			}
@@ -47,11 +46,11 @@ public class Server
 	private int removeMessage(Message message)
 	{
 		//find the message based on the sequence number AND the sender
-		for(int i = 0; i < messageBuffer.size(); i++)
+		for (int i = 0; i < messageBuffer.size(); i++)
 		{
 			//if current message has the matching sequence number and sender
-			if(messageBuffer.get(i).getSequenceNumber() == message.getSequenceNumber() &&
-			   messageBuffer.get(i).getSource().getUsername().equals(message.getSource().getUsername()))
+			if (messageBuffer.get(i).getSequenceNumber() == message.getSequenceNumber() &&
+					messageBuffer.get(i).getSource().getUsername().equals(message.getSource().getUsername()))
 			{
 				messageBuffer.remove(i);
 				return i;
@@ -59,6 +58,20 @@ public class Server
 		}
 		//if message cannot be found
 		return -1;
+	}
+
+	private Vector<Message> findMessages(User user)
+	{
+		Vector<Message> userMessages = new Vector<Message>();
+		for (Message curMessage : messageBuffer)
+		{
+			if (curMessage.getUser().getUsername().equals(user.getUsername()))
+			{
+				userMessages.add(curMessage);
+			}
+		}
+
+		return userMessages;
 	}
 
 	public void startServer() throws
@@ -105,10 +118,19 @@ public class Server
 	}
 
 	//TODO for the client who has logged off
-	private synchronized void remove(User user)
+	private synchronized void logoffUser(User user)
 	{
 		//update the client thread
 		//broadcast the update userlist to all connected users
+		for(int i  = 0; i < clientThreadList.size(); i++)
+		{
+			if(clientThreadList.get(i).getUser().getUsername().equals(user.getUsername()))
+			{
+				clientThreadList.remove(i);
+				return;
+			}
+		}
+
 	}
 
 	//TODO implement the broadcastUserList method to send every user their updated userList
@@ -161,7 +183,7 @@ public class Server
 			//          send an ACK message to the original sender of the message.
 			//      DISCONNECT
 			//          close connection from server side.
-			//          remove from userList.
+			//          logoffUser from userList.
 			//          broadcast the updated userList.
 
 			boolean keepGoing = true;
@@ -180,9 +202,10 @@ public class Server
 					e.printStackTrace();
 				}
 
-				switch(msg.getMessageType())
+				switch (msg.getMessageType())
 				{
 					//if client A is sending a message to client B
+					//TODO test whether SEND message type works.
 					case SEND:
 					{
 						//store the message in messageBuffer vector
@@ -190,21 +213,32 @@ public class Server
 						break;
 					}//END case SEND
 					//if client B is requesting messages destined to client B (receiver)
+					//TODO test whether GET message type works.
 					case GET:
 					{
 						//find all the messages destined to client B
 						//group them by the sender
 						//sort them by sequence for each group
 						//send the message/s
+
+						try
+						{
+							sOutput.writeObject(findMessages(msg.getSource()));
+						}
+						catch (IOException e)
+						{
+							e.printStackTrace();
+						}
 						break;
 					}//END case GET
 					//if client B is acknowledging message has been received
+					//TODO test whether ACK message type works.
 					case ACK:
 					{
 						//forward the ACK message to client A (original sender)
-						//remove message from messageBuffer. Based on sender and sequence number
+						//logoffUser message from messageBuffer. Based on sender and sequence number
 
-						ClientThread destination = findUser(msg.getDestination().getUsername());
+						ClientThread destination = findUser(msg.getDestination());
 						try
 						{
 							destination.sOutput.writeObject(msg);
@@ -233,8 +267,18 @@ public class Server
 					case DISCONNECT:
 					{
 						//disconnect the client
-						//remove from the userList
+						//logoffUser from the userList
 						//broadcast the updated userList to all connected clients/servers
+						keepGoing = false;
+						logoffUser(msg.getSource());
+						try
+						{
+							this.close();
+						}
+						catch (IOException e)
+						{
+							e.printStackTrace();
+						}
 						break;
 					}//END case DISCONNECT
 				}//END switch(msg.getMEssageType())
