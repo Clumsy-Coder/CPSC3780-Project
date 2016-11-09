@@ -4,12 +4,10 @@ import utilities.Message;
 import utilities.MessageType;
 import utilities.User;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.*;
 import java.text.SimpleDateFormat;
+import java.util.Hashtable;
 import java.util.Vector;
 
 
@@ -28,8 +26,9 @@ public class Server
 	private DatagramSocket socket;
 	private final int MAX_INCOMING_SIZE = 1024;
 	private final int MAX_OUTGOING_SIZE = 1024;
-	private Vector<User>    connectedUser;
-	private Vector<Message> GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is recieved for each message
+	private Vector<User>                   connectedUser;
+	private Hashtable<String, InetAddress> connectedUsersHashT;
+	private Vector<Message>                GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is recieved for each message
 	
 	/**
 	 * Server starts in port 5555
@@ -53,6 +52,7 @@ public class Server
 		messageBuffer = new Vector<Message>();
 		connectedUser = new Vector<User>();
 		GET_MessageBuffer = new Vector<Message>();
+		connectedUsersHashT = new Hashtable<String, InetAddress>();
 	}
 	
 	private ClientThread findUser(User user)
@@ -153,9 +153,9 @@ public class Server
 				//read the object
 				Message message = (Message) inputStream.readObject();
 				//handle the message if the Message object is not null
-				if(message != null)
+				if (message != null)
 				{
-					this.handleMessage(message);
+					this.handleMessage(message, incomingPacket.getAddress());
 				}
 			}
 			
@@ -206,11 +206,40 @@ public class Server
 	
 	private synchronized void sendMessage(MessageType messageType, User source, User destination, Object payload)
 	{
+		Message message = new Message(messageType, source, destination, payload);
+		
+		/*
+				DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+				socket.receive(incomingPacket);
+				byte[]               data        = incomingPacket.getData();
+				ByteArrayInputStream in          = new ByteArrayInputStream(data);
+				ObjectInputStream    inputStream = new ObjectInputStream(in);
+				//read the object
+				Message message = (Message) inputStream.readObject();
+		 */
+		
+		ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
+		ObjectOutputStream    oos  = null;
+		try
+		{
+			oos = new ObjectOutputStream(baos);
+			oos.writeObject(message);
+			byte[]         sendData   = baos.toByteArray();
+			DatagramPacket sendPacket = new DatagramPacket(sendData,
+			                                               sendData.length,
+			                                               connectedUsersHashT.get(destination.getUsername()),
+			                                               port);
+			socket.send(sendPacket);
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
 		
 	}
 	
 	
-	private synchronized void handleMessage(Message message)
+	private synchronized void handleMessage(Message message, InetAddress ipAddress)
 	{
 		//handle the message based on the type.
 		//possible type:
@@ -296,7 +325,8 @@ public class Server
 			{
 				//get the client and add it to the connectedUser vector
 				User user = message.getSource();
-				connectedUser.add(user);
+//				connectedUser.add(user);
+				connectedUsersHashT.put(user.getUsername(), ipAddress);
 				//broadcast the connectedUser vector to all connected users/server
 				//TODO implement broadcast the newly added user to everyone
 				break;
@@ -307,9 +337,11 @@ public class Server
 				User user = message.getSource();
 				for (int i = 0; i < connectedUser.size(); i++)
 				{
-					if (connectedUser.get(i).getUsername().equals(user.getUsername()))
+//					if (connectedUser.get(i).getUsername().equals(user.getUsername()))
+					if (connectedUsersHashT.get(user.getUsername()) != null)
 					{
-						connectedUser.remove(i);
+//						connectedUser.remove(i);
+						connectedUsersHashT.remove(user.getUsername());
 					}
 				}
 				//broadcast the connectUser vector to all connected users/server
