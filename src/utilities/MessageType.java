@@ -1,4 +1,4 @@
-package client.backend;
+package utilities;
 
 /**
  * Enum used for keeping track what type of message is being sent.<br>
