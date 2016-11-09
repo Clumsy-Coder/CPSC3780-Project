@@ -4,18 +4,18 @@ import utilities.Message;
 import utilities.MessageType;
 import utilities.User;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.Vector;
 
 
 public class Server
 {
-	private int                  port;
+	private int port = 5555;
 	private SimpleDateFormat     sdf;
 	private ServerSocket         serverSocket;
 	private boolean              keepGoing;
@@ -23,7 +23,14 @@ public class Server
 	private Vector<Message>      messageBuffer;
 	private Message              msg;
 	private User                 serverUser;
-
+	
+	//UDP
+	private DatagramSocket socket;
+	private final int MAX_INCOMING_SIZE = 1024;
+	private final int MAX_OUTGOING_SIZE = 1024;
+	private Vector<User>    connectedUser;
+	private Vector<Message> GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is recieved for each message
+	
 	/**
 	 * Server starts in port 5555
 	 */
@@ -31,7 +38,7 @@ public class Server
 	{
 		this(username, 5555);
 	}
-
+	
 	/**
 	 * Server starts on specified port
 	 *
@@ -44,8 +51,10 @@ public class Server
 		sdf = new SimpleDateFormat("HH:mm:ss");
 		clientThreadList = new Vector<ClientThread>();
 		messageBuffer = new Vector<Message>();
+		connectedUser = new Vector<User>();
+		GET_MessageBuffer = new Vector<Message>();
 	}
-
+	
 	private ClientThread findUser(User user)
 	{
 		for (int i = 0; i < clientThreadList.size(); i++)
@@ -55,10 +64,10 @@ public class Server
 				return clientThreadList.get(i);
 			}
 		}
-
+		
 		return null;
 	}
-
+	
 	private int removeMessage(Message message)
 	{
 		//find the message based on the sequence number AND the sender
@@ -66,7 +75,7 @@ public class Server
 		{
 			//if current message has the matching sequence number and sender
 			if (messageBuffer.get(i).getSequenceNumber() == message.getSequenceNumber() &&
-					messageBuffer.get(i).getSource().getUsername().equals(message.getSource().getUsername()))
+				messageBuffer.get(i).getSource().getUsername().equals(message.getSource().getUsername()))
 			{
 				messageBuffer.remove(i);
 				return i;
@@ -75,7 +84,7 @@ public class Server
 		//if message cannot be found
 		return -1;
 	}
-
+	
 	private Vector<Message> findMessages(User user)
 	{
 		Vector<Message> userMessages = new Vector<Message>();
@@ -86,56 +95,93 @@ public class Server
 				userMessages.add(curMessage);
 			}
 		}
-
+		
 		return userMessages;
 	}
-
-	public void startServer() throws
-	                          IOException,
-	                          ClassNotFoundException
+	
+	public void startServer()
 	{
-		serverSocket = new ServerSocket(port);
-		System.out.println("Server up and running on port: " + port);
-		keepGoing = true;
-
-		while (keepGoing)
+//		serverSocket = new ServerSocket(port);
+//		System.out.println("Server up and running on port: " + port);
+//		keepGoing = true;
+//
+//		while (keepGoing)
+//		{
+//			//accept the socket
+//			System.out.println("Server waiting for Clients on port: " + port);
+//			Socket socket = serverSocket.accept();
+//
+//			//for stopping the server
+//			if (!keepGoing)
+//			{
+//				break;
+//			}
+//
+//			ClientThread t = new ClientThread(socket);
+//			clientThreadList.add(t);
+//			t.start();
+//
+//		}
+//
+//		//close the server socket
+//		serverSocket.close();
+//		for (int i = 0; i < clientThreadList.size(); i++)
+//		{
+//			clientThreadList.get(i).sInput.close();
+//			clientThreadList.get(i).sOutput.close();
+//			clientThreadList.get(i).socket.close();
+//		}
+//
+//		System.out.println("Server stopped.");
+		
+		try
 		{
-			//accept the socket
-			System.out.println("Server waiting for Clients on port: " + port);
-			Socket socket = serverSocket.accept();
-
-			//for stopping the server
-			if (!keepGoing)
+			socket = new DatagramSocket(port);
+			byte[] incomingData = new byte[MAX_INCOMING_SIZE];
+			keepGoing = true;
+			while (keepGoing)
 			{
-				break;
+				if (!keepGoing)
+				{
+					return;
+				}
+				DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+				socket.receive(incomingPacket);
+				byte[]               data        = incomingPacket.getData();
+				ByteArrayInputStream in          = new ByteArrayInputStream(data);
+				ObjectInputStream    inputStream = new ObjectInputStream(in);
+				//read the object
+				Message message = (Message) inputStream.readObject();
+				//handle the message if the Message object is not null
+				if(message != null)
+				{
+					this.handleMessage(message);
+				}
 			}
-
-			ClientThread t = new ClientThread(socket);
-			clientThreadList.add(t);
-			t.start();
-
+			
 		}
-
-		//close the server socket
-		serverSocket.close();
-		for (int i = 0; i < clientThreadList.size(); i++)
+		catch (SocketException e)
 		{
-			clientThreadList.get(i).sInput.close();
-			clientThreadList.get(i).sOutput.close();
-			clientThreadList.get(i).socket.close();
+			System.out.println(serverUser.getUsername() + " > Unable to create DatagramSocket");
 		}
-
-		System.out.println("Server stopped.");
-
+		catch (IOException e)
+		{
+			System.out.println(serverUser.getUsername() + " > Unable to recieve packet.");
+		}
+		catch (ClassNotFoundException e)
+		{
+			System.out.println(serverUser.getUsername() + " > Unable to read Message object");
+		}
+		
 	}
-
+	
 	public void stopServer() throws
 	                         IOException
 	{
 		keepGoing = false;
 		new Socket("localhost", port);
 	}
-
+	
 	//TODO for the client who has logged off
 	private synchronized void logoffUser(User user)
 	{
@@ -149,23 +195,144 @@ public class Server
 				return;
 			}
 		}
-
+		
 	}
-
+	
 	//TODO implement the broadcastUserList method to send every user their updated userList
 	private synchronized void broadcastUserList()
 	{
-
+		
 	}
-
+	
+	private synchronized void sendMessage(MessageType messageType, User source, User destination, Object payload)
+	{
+		
+	}
+	
+	
+	private synchronized void handleMessage(Message message)
+	{
+		//handle the message based on the type.
+		//possible type:
+		//  SEND
+		//  GET
+		//  ACK
+		//  USERS
+		//  CONNECT
+		//  DISCONNECT
+		switch (message.getMessageType())
+		{
+			case SEND:
+			{
+				//get the message and store it in messageBuffer
+				messageBuffer.add(message);
+				break;
+			}
+			case GET:
+			{
+				//get the message that is destined to to client B
+				//send the message to client B
+				
+				//using a new thread in case there's multiple messages that needs to be sent
+				Runnable tempThread = () ->
+				{
+					
+					for (int i = 0; i < messageBuffer.size(); i++)
+					{
+						//get the message that is destined to client B
+						if (messageBuffer.get(i)
+							.getDestination()
+							.getUsername()
+							.equals(message.getSource().getUsername()))
+						{
+							GET_MessageBuffer.add(messageBuffer.get(i));
+						}
+					}
+					
+					//send each message to Client B
+					for (int i = 0; i < GET_MessageBuffer.size(); i++)
+					{
+						this.sendMessage(MessageType.GET,
+						                 GET_MessageBuffer.get(i).getSource(),
+						                 message.getDestination(),
+						                 GET_MessageBuffer.get(i).getPayload());
+					}
+					
+				};
+				
+				new Thread(tempThread).start();
+				
+				break;
+			}
+			case ACK:
+			{
+				//check which message is it being acknowledged for. sequence number, source and destination
+				//foreword the ACK message to the original sender
+				//remove message from messageBuffer
+				
+				for (int i = 0; i < GET_MessageBuffer.size(); i++)
+				{
+					//check for the sequence number, source and destination
+					if (GET_MessageBuffer.get(i).getSequenceNumber() == message.getSequenceNumber() &&
+						GET_MessageBuffer.get(i).getSource().getUsername().equals(message.getDestination()) &&
+						GET_MessageBuffer.get(i).getDestination().getUsername().equals(message.getSource()))
+					{
+						Message ackMessage = GET_MessageBuffer.remove(i);
+						this.sendMessage(MessageType.ACK,
+						                 message.getSource(),
+						                 message.getDestination(),
+						                 ackMessage.getSequenceNumber());
+						
+					}
+				}
+				
+				break;
+			}
+			case USERS:
+			{
+				break;
+			}
+			case CONNECT:
+			{
+				//get the client and add it to the connectedUser vector
+				User user = message.getSource();
+				connectedUser.add(user);
+				//broadcast the connectedUser vector to all connected users/server
+				//TODO implement broadcast the newly added user to everyone
+				break;
+			}
+			case DISCONNECT:
+			{
+				//get the client and remove it from the connectedUser vector
+				User user = message.getSource();
+				for (int i = 0; i < connectedUser.size(); i++)
+				{
+					if (connectedUser.get(i).getUsername().equals(user.getUsername()))
+					{
+						connectedUser.remove(i);
+					}
+				}
+				//broadcast the connectUser vector to all connected users/server
+				//TODO implement broadcast the updated userList vector to everyone
+				break;
+			}
+			default:
+			{
+				System.out.println(serverUser.getUsername() + " > unknown message type from: " + message.getSource()
+					.getUsername());
+				break;
+			}
+		}
+	}
+	
 	private class ClientThread extends Thread
 	{
 		Socket             socket;
 		ObjectOutputStream sOutput;
 		ObjectInputStream  sInput;
 		private User user;
-
-
+		
+		
 		ClientThread(Socket socket) throws
 		                            IOException,
 		                            ClassNotFoundException
@@ -178,14 +345,14 @@ public class Server
 			Message msg = (Message) sInput.readObject();
 			user = msg.getSource();
 			System.out.println("User: " + user.getUsername() + " connected.");
-
+			
 		}
-
+		
 		protected User getUser()
 		{
 			return user;
 		}
-
+		
 		//this will run for every user.
 		@Override
 		public void run()
@@ -206,7 +373,7 @@ public class Server
 			//          close connection from server side.
 			//          logoffUser from userList.
 			//          broadcast the updated userList.
-
+			
 			boolean keepGoing = true;
 			while (keepGoing)
 			{
@@ -222,7 +389,7 @@ public class Server
 				{
 					e.printStackTrace();
 				}
-
+				
 				switch (msg.getMessageType())
 				{
 					//if client A is sending a message to client B
@@ -232,11 +399,11 @@ public class Server
 						//store the message in messageBuffer vector
 						System.out.print(serverUser.getUsername().toString() + " > ");
 						System.out.println("Message received from: '" + msg.getSource().getUsername() + "'"
-								                   + " content: '" + msg.getPayload().toString() + "'");
+							                   + " content: '" + msg.getPayload().toString() + "'");
 //						System.out.println("Message content: " + msg.getPayload().toString());
 						messageBuffer.add(msg);
 						System.out.println(
-								serverUser.getUsername() + " > message stored in buffer. buffer size: " + messageBuffer.size());
+							serverUser.getUsername() + " > message stored in buffer. buffer size: " + messageBuffer.size());
 						break;
 					}//END case SEND
 					//if client B is requesting messages destined to client B (receiver)
@@ -247,13 +414,14 @@ public class Server
 						//group them by the sender
 						//sort them by sequence for each group
 						//send the message/s
-
+						
 						System.out.println(
-								serverUser.getUsername().toString() + " > GET request received from: " + msg.getSource()
-										.getUsername());
-
+							serverUser.getUsername().toString() + " > GET request received from: " + msg.getSource()
+								.getUsername());
+						
 						Vector<Message> msgList = findMessages(msg.getSource());
-						Message         message = new Message(MessageType.GET, msg.getSource(), msg.getSource(), msgList);
+						Message message = new Message(MessageType.GET, msg.getSource(), msg.getSource(),
+						                              msgList);
 						try
 						{
 							sOutput.writeObject(message);
@@ -270,7 +438,7 @@ public class Server
 					{
 						//forward the ACK message to client A (original sender)
 						//logoffUser message from messageBuffer. Based on sender and sequence number
-
+						
 						ClientThread destination = findUser(msg.getDestination());
 						try
 						{
@@ -285,9 +453,9 @@ public class Server
 						{
 							e.printStackTrace();
 						}
-
+						
 						removeMessage(msg);
-
+						
 						break;
 					}//END case ACK
 					//if a server is sending information about the userList vector
@@ -308,11 +476,12 @@ public class Server
 						//disconnect the client
 						//logoffUser from the userList
 						//broadcast the updated userList to all connected clients/servers
-						System.out.println(serverUser.getUsername().toString() + " > user '"+
-						                   msg.getSource().getUsername().toString() + "' is disconnecting");
+						System.out.println(serverUser.getUsername().toString() + " > user '" +
+							                   msg.getSource().getUsername().toString() + "' is disconnecting");
 						keepGoing = false;
 						logoffUser(msg.getSource());
-						System.out.println(serverUser.getUsername().toString() + " > userList.size() : " + clientThreadList.size());
+						System.out.println(serverUser.getUsername()
+							                   .toString() + " > userList.size() : " + clientThreadList.size());
 						try
 						{
 							this.close();
@@ -326,7 +495,7 @@ public class Server
 				}//END switch(msg.getMEssageType())
 			}//END while(keepGoing)
 		}//END METHOD run()
-
+		
 		//TODO catch exceptions and handle them
 		private void close() throws
 		                     IOException
@@ -335,7 +504,7 @@ public class Server
 			sInput.close();
 			socket.close();
 		}
-
+		
 		//TODO implement the proper writeMessage
 		private boolean writeMsg(String message) throws
 		                                         IOException
@@ -346,7 +515,7 @@ public class Server
 				close();
 				return false;
 			}
-
+			
 			sOutput.writeObject(message);
 			return true;
 		}//END METHOD writeMsg(String)
