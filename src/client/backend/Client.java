@@ -1,5 +1,9 @@
 package client.backend;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.ArrayList;
 
 /**
@@ -7,11 +11,13 @@ import java.util.ArrayList;
  */
 public class Client
 {
-	private static String          serverIP;
-	private static User            user;
-	private        int             port;
-	private        ArrayList<User> connectedUsers;
-//	private final int portNumber = 5555;
+	private static String             serverIP;
+	private static User               user;
+	private        int                port;
+	private        ArrayList<User>    connectedUsers;
+	private        ObjectOutputStream sOutput;  // I/O
+	private        ObjectInputStream  sInput;   // I/O
+	private        Socket             socket;   // I/O
 
 	Client(String serverIP, User user)
 	{
@@ -23,7 +29,6 @@ public class Client
 		this.serverIP = serverIP;
 		this.port = port;
 		this.user = user;
-
 	}
 
 	public String getServerIP()
@@ -66,6 +71,34 @@ public class Client
 		//not sure if the code is placed here:
 		//  update the connectedUser list everytime, the server sends
 		//  an update of connected users.
+
+		try
+		{
+			socket = new Socket(serverIP, port);
+			System.out.println("Connection accepted " + socket.getInetAddress() + ":" + this.getPort());
+
+			sInput = new ObjectInputStream(socket.getInputStream());
+			sOutput = new ObjectOutputStream(socket.getOutputStream());
+
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+
+		new ListenFromServer().start();
+
+		try
+		{
+			Message message = new Message(MessageType.CONNECT, user, null, null);
+			sOutput.writeObject(message);
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+
+
 	}
 
 	private void disconnect()
@@ -82,5 +115,9 @@ public class Client
 		//if the server replies, update the message list.
 	}
 
+	private class ListenFromServer extends Thread
+	{
 
-}
+	}
+
+}//END CLASS Client
