@@ -4,10 +4,11 @@ import utilities.Message;
 import utilities.MessageType;
 import utilities.User;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -24,12 +25,19 @@ public class Client
 	private        ObjectInputStream  sInput;   // I/O
 	private        Socket             socket;   // I/O
 	private        boolean            keepGoing;
-
+	
+	//UDP
+	private DatagramSocket udpSocket;
+	private final int MAX_INCOMING_SIZE = 1024;
+	private final int MAX_OUTGOING_SIZE = 1024;
+	
+	
+	
 	Client(String serverIP, User user)
 	{
 		this(serverIP, 5555, user);
 	}
-
+	
 	Client(String serverIP, int port, User user)
 	{
 		this.serverIP = serverIP;
@@ -37,32 +45,32 @@ public class Client
 		this.user = user;
 		keepGoing = true;
 	}
-
+	
 	public String getServerIP()
 	{
 		return serverIP;
 	}
-
+	
 	protected void setServerIP(String serverIP)
 	{
 		this.serverIP = serverIP;
 	}
-
+	
 	public User getUser()
 	{
 		return user;
 	}
-
+	
 	public int getPort()
 	{
 		return port;
 	}
-
+	
 	protected void setPort(int port)
 	{
 		this.port = port;
 	}
-
+	
 	protected void sendMessage(String textMessage, User destination)
 	{
 		Message message = new Message(MessageType.SEND, user, destination, textMessage);
@@ -77,7 +85,7 @@ public class Client
 			System.out.println("Message content: " + message.getPayload().toString());
 		}
 	}
-
+	
 	public boolean connect()
 	{
 		//connect to the server.
@@ -88,45 +96,77 @@ public class Client
 		//  update the connectedUser list everytime, the server sends
 		//  an update of connected users.
 		keepGoing = true;
+//		try
+//		{
+//			socket = new Socket(serverIP, port);
+//			System.out.println("Connection accepted " + socket.getInetAddress() + ":" + this.getPort());
+//
+//			sInput = new ObjectInputStream(socket.getInputStream());
+//			sOutput = new ObjectOutputStream(socket.getOutputStream());
+//
+//		}
+//		catch (IOException e)
+//		{
+////			e.printStackTrace();
+//			System.out.println("Could not setup socket, input stream or output stream");
+//			keepGoing = false;
+//			return keepGoing;
+//		}
+//
+//		new ListenFromServer().start();
+//		System.out.println("Listening to the server");
+//		new SendGET_request().start();
+//		System.out.println("SendGET_request thread started");
+//
+//		try
+//		{
+//			Message message = new Message(MessageType.CONNECT, user, null, null);
+//			sOutput.writeObject(message);
+//		}
+//		catch (IOException e)
+//		{
+////			e.printStackTrace();
+//			System.out.println("Unable to send initial message. Disconnecting");
+//			disconnect();
+//			return keepGoing;
+//		}
+		
 		try
 		{
-			socket = new Socket(serverIP, port);
-			System.out.println("Connection accepted " + socket.getInetAddress() + ":" + this.getPort());
-
-			sInput = new ObjectInputStream(socket.getInputStream());
-			sOutput = new ObjectOutputStream(socket.getOutputStream());
-
-		}
-		catch (IOException e)
-		{
-//			e.printStackTrace();
-			System.out.println("Could not setup socket, input stream or output stream");
-			keepGoing = false;
-			return keepGoing;
-		}
-
-		new ListenFromServer().start();
-		System.out.println("Listening to the server");
-		new SendGET_request().start();
-		System.out.println("SendGET_request thread started");
-
-		try
-		{
+			udpSocket = new DatagramSocket();
+			InetAddress ipaddress = InetAddress.getLocalHost();
 			Message message = new Message(MessageType.CONNECT, user, null, null);
-			sOutput.writeObject(message);
+			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+			ObjectOutputStream oos = new ObjectOutputStream(outputStream);
+			oos.writeObject(message);
+			byte [] data = outputStream.toByteArray();
+			DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), 5555);
+			udpSocket.send(packet);
+			
+		}
+		catch (SocketException e)
+		{
+//			e.printStackTrace();
+			System.out.println(user.getUsername() + " > unable to create UDP socket");
+			keepGoing = false;
+		}
+		catch (UnknownHostException e)
+		{
+//			e.printStackTrace();
+			System.out.println(user.getUsername() + " > unable to get ipaddress");
+			keepGoing = false;
 		}
 		catch (IOException e)
 		{
 //			e.printStackTrace();
-			System.out.println("Unable to send initial message. Disconnecting");
-			disconnect();
-			return keepGoing;
+			System.out.println(user.getUsername() + " > unable to create ObjectOutputStream or unable to write object");
+			keepGoing = false;
 		}
-
+		
 		return keepGoing;
-
+		
 	}//END METHOD connect()
-
+	
 	public void disconnect()
 	{
 		//send a message to the server that you are disconnecting.
@@ -158,13 +198,13 @@ public class Client
 			e.printStackTrace();
 		}
 	}
-
+	
 	private void sendGetRequest()
 	{
 		//send a get request every n milliseconds.
 		//if the server replies, update the message list.
 	}
-
+	
 	private class ListenFromServer extends Thread
 	{
 		public void run()
@@ -174,13 +214,13 @@ public class Client
 				try
 				{
 					Message msg = (Message) sInput.readObject();
-
+					
 					//check what type of message it is.
 					//possible types received:
 					//  GET
 					//  ACK
 					//  USERS
-
+					
 					switch (msg.getMessageType())
 					{
 						case GET:
@@ -190,24 +230,24 @@ public class Client
 							for (int i = 0; i < msgList.size(); i++)
 							{
 								System.out.println(
-										msg.getSource().getUsername() + " > " + msgList.get(i).getPayload() + "\n");
+									msg.getSource().getUsername() + " > " + msgList.get(i).getPayload() + "\n");
 							}
-
+							
 							if (msgList.size() > 0)
 							{
 								//send a ACK
 								Message message = new Message(MessageType.ACK, user, msg.getSource(), null);
 								sOutput.writeObject(message);
-
+								
 							}
-
+							
 							break;
 						}
 						case ACK:
 						{
 							System.out.println(
-									user.getUsername() + " > " + "ACK message recieved from " + msg.getSource()
-											.getUsername());
+								user.getUsername() + " > " + "ACK message recieved from " + msg.getSource()
+									.getUsername());
 							break;
 						}
 						case USERS:
@@ -218,11 +258,11 @@ public class Client
 						default:
 						{
 							System.out.println(
-									user.getUsername() + " > " + "unknown MessageType received : " + msg.getMessageType());
+								user.getUsername() + " > " + "unknown MessageType received : " + msg.getMessageType());
 							break;
 						}
 					}
-
+					
 				}
 				catch (IOException e)
 				{
@@ -237,7 +277,7 @@ public class Client
 			}
 		}
 	}
-
+	
 	private class SendGET_request extends Thread
 	{
 		public void run()
@@ -263,5 +303,5 @@ public class Client
 			}
 		}
 	}
-
+	
 }//END CLASS Client
