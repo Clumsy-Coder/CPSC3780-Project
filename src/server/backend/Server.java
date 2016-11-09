@@ -1,8 +1,8 @@
 package server.backend;
 
-import client.backend.Message;
-import client.backend.MessageType;
-import client.backend.User;
+import utilities.Message;
+import utilities.MessageType;
+import utilities.User;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -34,6 +34,7 @@ public class Server
 
 	/**
 	 * Server starts on specified port
+	 *
 	 * @param port
 	 */
 	Server(String username, int port)
@@ -173,7 +174,9 @@ public class Server
 			sOutput = new ObjectOutputStream(socket.getOutputStream());
 			sInput = new ObjectInputStream(socket.getInputStream());
 			//the first thing is the user object information.
-			user = (User) sInput.readObject();
+//			user = (User) sInput.readObject();
+			Message msg = (Message) sInput.readObject();
+			user = msg.getSource();
 			System.out.println("User: " + user.getUsername() + " connected.");
 
 		}
@@ -227,7 +230,13 @@ public class Server
 					case SEND:
 					{
 						//store the message in messageBuffer vector
+						System.out.print(serverUser.getUsername().toString() + " > ");
+						System.out.println("Message received from: '" + msg.getSource().getUsername() + "'"
+								                   + " content: '" + msg.getPayload().toString() + "'");
+//						System.out.println("Message content: " + msg.getPayload().toString());
 						messageBuffer.add(msg);
+						System.out.println(
+								serverUser.getUsername() + " > message stored in buffer. buffer size: " + messageBuffer.size());
 						break;
 					}//END case SEND
 					//if client B is requesting messages destined to client B (receiver)
@@ -238,6 +247,10 @@ public class Server
 						//group them by the sender
 						//sort them by sequence for each group
 						//send the message/s
+
+						System.out.println(
+								serverUser.getUsername().toString() + " > GET request received from: " + msg.getSource()
+										.getUsername());
 
 						Vector<Message> msgList = findMessages(msg.getSource());
 						Message         message = new Message(MessageType.GET, null, msg.getSource(), msgList);
@@ -293,8 +306,11 @@ public class Server
 						//disconnect the client
 						//logoffUser from the userList
 						//broadcast the updated userList to all connected clients/servers
+						System.out.println(serverUser.getUsername().toString() + " > user '"+
+						                   msg.getSource().getUsername().toString() + "' is disconnecting");
 						keepGoing = false;
 						logoffUser(msg.getSource());
+						System.out.println(serverUser.getUsername().toString() + " > userList.size() : " + clientThreadList.size());
 						try
 						{
 							this.close();
