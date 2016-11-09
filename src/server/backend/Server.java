@@ -253,7 +253,7 @@ public class Server
 										.getUsername());
 
 						Vector<Message> msgList = findMessages(msg.getSource());
-						Message         message = new Message(MessageType.GET, null, msg.getSource(), msgList);
+						Message         message = new Message(MessageType.GET, msg.getSource(), msg.getSource(), msgList);
 						try
 						{
 							sOutput.writeObject(message);
@@ -278,6 +278,8 @@ public class Server
 //							destination.sOutput.writeObject(msg);
 							//forward the sequence number as well. NOT done at the moment
 							destination.sOutput.writeObject(message);
+							//TODO implement a proper replacement for clearing messages that are acknowledged.
+							messageBuffer.clear();
 						}
 						catch (IOException e)
 						{
