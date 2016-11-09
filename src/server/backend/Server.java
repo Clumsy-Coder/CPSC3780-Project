@@ -22,7 +22,20 @@ public class Server
 	private Vector<ClientThread> clientThreadList;
 	private Vector<Message>      messageBuffer;
 	private Message              msg;
+	private User                 serverUser;
 
+	/**
+	 * Server starts in port 5555
+	 */
+	Server()
+	{
+		this(5555);
+	}
+
+	/**
+	 * Server starts on specified port
+	 * @param port
+	 */
 	Server(int port)
 	{
 		this.port = port;
@@ -80,15 +93,16 @@ public class Server
 	                          ClassNotFoundException
 	{
 		serverSocket = new ServerSocket(port);
-		System.out.println("Server up and running");
+		System.out.println("Server up and running on port: " + port);
 		keepGoing = true;
 
 		while (keepGoing)
 		{
 			//accept the socket
+			System.out.println("Server waiting for Clients on port: " + port);
 			Socket socket = serverSocket.accept();
 
-			//for stoping the server
+			//for stopping the server
 			if (!keepGoing)
 			{
 				break;
@@ -96,7 +110,7 @@ public class Server
 
 			ClientThread t = new ClientThread(socket);
 			clientThreadList.add(t);
-//			t.start();
+			t.start();
 
 		}
 
@@ -108,6 +122,8 @@ public class Server
 			clientThreadList.get(i).sOutput.close();
 			clientThreadList.get(i).socket.close();
 		}
+
+		System.out.println("Server stopped.");
 
 	}
 
@@ -123,9 +139,9 @@ public class Server
 	{
 		//update the client thread
 		//broadcast the update userlist to all connected users
-		for(int i  = 0; i < clientThreadList.size(); i++)
+		for (int i = 0; i < clientThreadList.size(); i++)
 		{
-			if(clientThreadList.get(i).getUser().getUsername().equals(user.getUsername()))
+			if (clientThreadList.get(i).getUser().getUsername().equals(user.getUsername()))
 			{
 				clientThreadList.remove(i);
 				return;
@@ -222,10 +238,11 @@ public class Server
 						//sort them by sequence for each group
 						//send the message/s
 
+						Vector<Message> msgList = findMessages(msg.getSource());
+						Message         message = new Message(MessageType.GET, null, msg.getSource(), msgList);
 						try
 						{
-
-							sOutput.writeObject(findMessages(msg.getSource()));
+							sOutput.writeObject(message);
 						}
 						catch (IOException e)
 						{
@@ -243,7 +260,10 @@ public class Server
 						ClientThread destination = findUser(msg.getDestination());
 						try
 						{
-							destination.sOutput.writeObject(msg);
+							Message message = new Message(MessageType.ACK, msg.getSource(), msg.getDestination(), null);
+//							destination.sOutput.writeObject(msg);
+							//forward the sequence number as well. NOT done at the moment
+							destination.sOutput.writeObject(message);
 						}
 						catch (IOException e)
 						{
@@ -266,6 +286,7 @@ public class Server
 						break;
 					}//END case USERS
 					//if client A is disconnecting the server.
+					//TODO broadcast the updated userList to every connected user/server.
 					case DISCONNECT:
 					{
 						//disconnect the client
