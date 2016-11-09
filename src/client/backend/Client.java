@@ -1,5 +1,9 @@
 package client.backend;
 
+import utilities.Message;
+import utilities.MessageType;
+import utilities.User;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -18,6 +22,7 @@ public class Client
 	private        ObjectOutputStream sOutput;  // I/O
 	private        ObjectInputStream  sInput;   // I/O
 	private        Socket             socket;   // I/O
+	private        boolean            keepGoing;
 
 	Client(String serverIP, User user)
 	{
@@ -29,6 +34,7 @@ public class Client
 		this.serverIP = serverIP;
 		this.port = port;
 		this.user = user;
+		keepGoing = true;
 	}
 
 	public String getServerIP()
@@ -56,13 +62,22 @@ public class Client
 		this.port = port;
 	}
 
-	protected void sendMessage(String textMessage, User destionation)
+	protected void sendMessage(String textMessage, User destination)
 	{
-		Message message = new Message(MessageType.SEND, user, destionation, textMessage);
-		//send the message to the server
+		Message message = new Message(MessageType.SEND, user, destination, textMessage);
+		try
+		{
+			sOutput.writeObject(message);
+		}
+		catch (IOException e)
+		{
+//			e.printStackTrace();
+			System.out.println("Unable to send message from : " + message.getSource().getUsername().toString());
+			System.out.println("Message content: " + message.getPayload().toString());
+		}
 	}
 
-	private void connect()
+	public boolean connect()
 	{
 		//connect to the server.
 		//send the server your info. The User object
@@ -71,7 +86,7 @@ public class Client
 		//not sure if the code is placed here:
 		//  update the connectedUser list everytime, the server sends
 		//  an update of connected users.
-
+		keepGoing = true;
 		try
 		{
 			socket = new Socket(serverIP, port);
@@ -83,10 +98,16 @@ public class Client
 		}
 		catch (IOException e)
 		{
-			e.printStackTrace();
+//			e.printStackTrace();
+			System.out.println("Could not setup socket, input stream or output stream");
+			keepGoing = false;
+			return keepGoing;
 		}
 
 		new ListenFromServer().start();
+		System.out.println("Listening to the server");
+		new SendGET_request().start();
+		System.out.println("SendGET_request thread started");
 
 		try
 		{
@@ -95,18 +116,46 @@ public class Client
 		}
 		catch (IOException e)
 		{
-			e.printStackTrace();
+//			e.printStackTrace();
+			System.out.println("Unable to send initial message. Disconnecting");
+			disconnect();
+			return keepGoing;
 		}
 
+		return keepGoing;
 
-	}
+	}//END METHOD connect()
 
-	private void disconnect()
+	public void disconnect()
 	{
-		//send a mesage to the server that you are disconnecting.
+		//send a message to the server that you are disconnecting.
 		//disconnect the server.
 		//make sure the output and input streams are closed.
 		//server will remove current user from the database as connected user
+		keepGoing = false;
+		Message message = new Message(MessageType.DISCONNECT, user, null, null);
+		try
+		{
+			//send a message to the server that you are disconnecting.
+			sOutput.writeObject(message);
+			//close the I/O streams
+			if (sInput != null)
+			{
+				sInput.close();
+			}
+			if (sOutput != null)
+			{
+				sOutput.close();
+			}
+			if (socket != null)
+			{
+				socket.close();
+			}
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
 	}
 
 	private void sendGetRequest()
@@ -117,7 +166,83 @@ public class Client
 
 	private class ListenFromServer extends Thread
 	{
+		public void run()
+		{
+			while(keepGoing)
+			{
+				try
+				{
+					Message msg = (Message) sInput.readObject();
 
+					//check what type of message it is.
+					//possible types received:
+					//  GET
+					//  ACK
+					//  USERS
+
+					switch(msg.getMessageType())
+					{
+						case GET:
+						{
+							System.out.println("\n" + user.getUsername() + " > " + "GET request replied");
+							break;
+						}
+						case ACK:
+						{
+							System.out.println(user.getUsername() + " > " + "ACK message recieved from " + msg.getSource().getUsername());
+							break;
+						}
+						case USERS:
+						{
+							System.out.println(user.getUsername() + " > " + "USERS message recieved.");
+							break;
+						}
+						default:
+						{
+							System.out.println(user.getUsername() + " > " + "unknown MessageType received : " + msg.getMessageType());
+							break;
+						}
+					}
+
+				}
+				catch (IOException e)
+				{
+//					e.printStackTrace();
+					System.out.println(user.getUsername() + " > Connection closed. Exiting");
+					keepGoing = false;
+				}
+				catch (ClassNotFoundException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	private class SendGET_request extends Thread
+	{
+		public void run()
+		{
+			while(keepGoing)
+			{
+				Message message = new Message(MessageType.GET, user, null, null);
+				try
+				{
+					Thread.sleep(2000);
+					sOutput.writeObject(message);
+				}
+				catch (IOException e)
+				{
+//					e.printStackTrace();
+					System.out.println("from SendGET_request: closing thread.");
+				}
+				catch (InterruptedException e)
+				{
+//					e.printStackTrace();
+					System.out.println("from SendGET_request: Thread.sleep() failed");
+				}
+			}
+		}
 	}
 
 }//END CLASS Client
