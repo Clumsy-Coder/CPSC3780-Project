@@ -11,7 +11,7 @@ public class ServerMain
 	                                        IOException,
 	                                        ClassNotFoundException
 	{
-		Server server = new Server();
+		Server server = new Server("Server1");
 		server.startServer();
 		System.out.println("random text in ServerMain.java");
 		server.stopServer();

@@ -27,17 +27,18 @@ public class Server
 	/**
 	 * Server starts in port 5555
 	 */
-	Server()
+	Server(String username)
 	{
-		this(5555);
+		this(username, 5555);
 	}
 
 	/**
 	 * Server starts on specified port
 	 * @param port
 	 */
-	Server(int port)
+	Server(String username, int port)
 	{
+		serverUser = new User(username);
 		this.port = port;
 		sdf = new SimpleDateFormat("HH:mm:ss");
 		clientThreadList = new Vector<ClientThread>();

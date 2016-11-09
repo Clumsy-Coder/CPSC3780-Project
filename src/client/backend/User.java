@@ -34,6 +34,11 @@ public final class User implements Serializable
 
     //CONSTRUCTORS
 
+	public User(String username)
+	{
+		this.username = username;
+	}
+
     /**
      * Default constructor
      * @param username The unique username of the client
