@@ -14,6 +14,7 @@ public class ClientMain
 		int    port     = 5555;
 		String serverIP = "localhost";
 		String username = "Anonymous";
+		//String username = "Anonymous2";
 
 		User   user   = new User(username);
 		Client client = new Client(serverIP, port, user);
@@ -40,6 +41,7 @@ public class ClientMain
 			else
 			{
 				client.sendMessage(line, new User("Anonymous2"));
+				//client.sendMessage(line, new User("Anonymous"));
 			}
 		}
 		client.disconnect();
