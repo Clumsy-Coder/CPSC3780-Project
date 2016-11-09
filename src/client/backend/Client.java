@@ -9,6 +9,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Vector;
 
 /**
  * Class used to communicate with the server
@@ -168,7 +169,7 @@ public class Client
 	{
 		public void run()
 		{
-			while(keepGoing)
+			while (keepGoing)
 			{
 				try
 				{
@@ -180,16 +181,33 @@ public class Client
 					//  ACK
 					//  USERS
 
-					switch(msg.getMessageType())
+					switch (msg.getMessageType())
 					{
 						case GET:
 						{
-							System.out.println("\n" + user.getUsername() + " > " + "GET request replied");
+							//System.out.println("\n" + user.getUsername() + " > " + "GET request replied");
+							Vector<Message> msgList = (Vector<Message>) msg.getPayload();
+							for (int i = 0; i < msgList.size(); i++)
+							{
+								System.out.println(
+										msg.getSource().getUsername() + " > " + msgList.get(i).getPayload() + "\n");
+							}
+
+							if (msgList.size() > 0)
+							{
+								//send a ACK
+								Message message = new Message(MessageType.ACK, user, msg.getSource(), null);
+								sOutput.writeObject(message);
+
+							}
+
 							break;
 						}
 						case ACK:
 						{
-							System.out.println(user.getUsername() + " > " + "ACK message recieved from " + msg.getSource().getUsername());
+							System.out.println(
+									user.getUsername() + " > " + "ACK message recieved from " + msg.getSource()
+											.getUsername());
 							break;
 						}
 						case USERS:
@@ -199,7 +217,8 @@ public class Client
 						}
 						default:
 						{
-							System.out.println(user.getUsername() + " > " + "unknown MessageType received : " + msg.getMessageType());
+							System.out.println(
+									user.getUsername() + " > " + "unknown MessageType received : " + msg.getMessageType());
 							break;
 						}
 					}
@@ -223,7 +242,7 @@ public class Client
 	{
 		public void run()
 		{
-			while(keepGoing)
+			while (keepGoing)
 			{
 				Message message = new Message(MessageType.GET, user, null, null);
 				try
