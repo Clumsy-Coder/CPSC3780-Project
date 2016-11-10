@@ -29,6 +29,7 @@ public class Server
 	private Vector<User>                   connectedUser;
 	private Hashtable<String, InetAddress> connectedUsersHashT;
 	private Vector<Message>                GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is recieved for each message
+	private InetAddress                    clientIPaddress;
 	
 	/**
 	 * Server starts in port 5555
@@ -137,25 +138,30 @@ public class Server
 		try
 		{
 			socket = new DatagramSocket(port);
-			byte[] incomingData = new byte[MAX_INCOMING_SIZE];
+			System.out.println("Server up and running on port: " + port);
+//			byte[] incomingData = new byte[MAX_INCOMING_SIZE];
 			keepGoing = true;
 			while (keepGoing)
 			{
 				if (!keepGoing)
 				{
+					socket.close();
+					System.out.println(serverUser.getUsername() + " > Server stopped.");
 					return;
 				}
-				DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
-				socket.receive(incomingPacket);
-				byte[]               data        = incomingPacket.getData();
-				ByteArrayInputStream in          = new ByteArrayInputStream(data);
-				ObjectInputStream    inputStream = new ObjectInputStream(in);
-				//read the object
-				Message message = (Message) inputStream.readObject();
+//				DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+//				socket.receive(incomingPacket);
+//				byte[]               data        = incomingPacket.getData();
+//				ByteArrayInputStream in          = new ByteArrayInputStream(data);
+//				ObjectInputStream    inputStream = new ObjectInputStream(in);
+//				//read the object
+//				Message message = (Message) inputStream.readObject();
+				Message message = this.readMessage();
 				//handle the message if the Message object is not null
 				if (message != null)
 				{
-					this.handleMessage(message, incomingPacket.getAddress());
+//					this.handleMessage(message, incomingPacket.getAddress());
+					this.handleMessage(message);
 				}
 			}
 			
@@ -166,12 +172,12 @@ public class Server
 		}
 		catch (IOException e)
 		{
-			System.out.println(serverUser.getUsername() + " > Unable to recieve packet.");
+			System.out.println(serverUser.getUsername() + " > Unable to receive packet.");
 		}
-		catch (ClassNotFoundException e)
-		{
-			System.out.println(serverUser.getUsername() + " > Unable to read Message object");
-		}
+//		catch (ClassNotFoundException e)
+//		{
+//			System.out.println(serverUser.getUsername() + " > Unable to read Message object");
+//		}
 		
 	}
 	
@@ -179,7 +185,7 @@ public class Server
 	                         IOException
 	{
 		keepGoing = false;
-		new Socket("localhost", port);
+//		new Socket("localhost", port);
 	}
 	
 	//TODO for the client who has logged off
@@ -208,23 +214,12 @@ public class Server
 	{
 		Message message = new Message(messageType, source, destination, payload);
 		
-		/*
-				DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
-				socket.receive(incomingPacket);
-				byte[]               data        = incomingPacket.getData();
-				ByteArrayInputStream in          = new ByteArrayInputStream(data);
-				ObjectInputStream    inputStream = new ObjectInputStream(in);
-				//read the object
-				Message message = (Message) inputStream.readObject();
-		 */
-		
-		ByteArrayOutputStream baos = new ByteArrayOutputStream(6400);
-		ObjectOutputStream    oos  = null;
 		try
 		{
-			oos = new ObjectOutputStream(baos);
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ObjectOutputStream    oos  = new ObjectOutputStream(baos);
 			oos.writeObject(message);
-			byte[]         sendData   = baos.toByteArray();
+			byte[] sendData = baos.toByteArray();
 			DatagramPacket sendPacket = new DatagramPacket(sendData,
 			                                               sendData.length,
 			                                               connectedUsersHashT.get(destination.getUsername()),
@@ -238,8 +233,35 @@ public class Server
 		
 	}
 	
+	private Message readMessage()
+	{
+		Message message = null;
+		try
+		{
+			byte[]         incomingData   = new byte[MAX_INCOMING_SIZE];
+			DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+			socket.receive(incomingPacket);
+			byte[]               data        = incomingPacket.getData();
+			ByteArrayInputStream in          = new ByteArrayInputStream(data);
+			ObjectInputStream    inputStream = new ObjectInputStream(in);
+			//read the object
+			message = (Message) inputStream.readObject();
+			clientIPaddress = incomingPacket.getAddress();
+			
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+		catch (ClassNotFoundException e)
+		{
+			e.printStackTrace();
+		}
+		
+		return message;
+	}
 	
-	private synchronized void handleMessage(Message message, InetAddress ipAddress)
+	private synchronized void handleMessage(Message message)
 	{
 		//handle the message based on the type.
 		//possible type:
@@ -253,16 +275,22 @@ public class Server
 		{
 			case SEND:
 			{
+				System.out.println("------------------------------------------------------------");
 				//get the message and store it in messageBuffer
+				System.out.println(serverUser.getUsername() + " > message from: " + message.getSource().getUsername());
+				System.out.println("\t\tContent: " + message.getPayload().toString());
 				messageBuffer.add(message);
+				System.out.println("------------------------------------------------------------");
 				break;
 			}
 			case GET:
 			{
+				System.out.println("------------------------------------------------------------");
 				//get the message that is destined to to client B
 				//send the message to client B
 				
 				//using a new thread in case there's multiple messages that needs to be sent
+				System.out.println(serverUser.getUsername() + " > GET request from " + message.getSource().getUsername());
 				Runnable tempThread = () ->
 				{
 					
@@ -274,7 +302,7 @@ public class Server
 							.getUsername()
 							.equals(message.getSource().getUsername()))
 						{
-							GET_MessageBuffer.add(messageBuffer.get(i));
+							GET_MessageBuffer.add(messageBuffer.remove(i));
 						}
 					}
 					
@@ -289,8 +317,12 @@ public class Server
 					
 				};
 				
-				new Thread(tempThread).start();
+				if(messageBuffer.size() > 0)
+				{
+					new Thread(tempThread).start();
+				}
 				
+				System.out.println("------------------------------------------------------------");
 				break;
 			}
 			case ACK:
@@ -298,7 +330,7 @@ public class Server
 				//check which message is it being acknowledged for. sequence number, source and destination
 				//foreword the ACK message to the original sender
 				//remove message from messageBuffer
-				
+				System.out.println("------------------------------------------------------------");
 				for (int i = 0; i < GET_MessageBuffer.size(); i++)
 				{
 					//check for the sequence number, source and destination
@@ -310,40 +342,54 @@ public class Server
 						this.sendMessage(MessageType.ACK,
 						                 message.getSource(),
 						                 message.getDestination(),
-						                 ackMessage.getSequenceNumber());
-						
+//						                 ackMessage.getSequenceNumber());
+                                         null); //temporarily don't send  the sequence number.
 					}
 				}
-				
+				System.out.println("------------------------------------------------------------");
 				break;
 			}
 			case USERS:
 			{
+				System.out.println("------------------------------------------------------------");
+				System.out.println("------------------------------------------------------------");
 				break;
 			}
 			case CONNECT:
 			{
+				System.out.println("------------------------------------------------------------");
 				//get the client and add it to the connectedUser vector
 				User user = message.getSource();
 //				connectedUser.add(user);
-				connectedUsersHashT.put(user.getUsername(), ipAddress);
+				connectedUsersHashT.put(user.getUsername().toString(), clientIPaddress);
+				System.out.println(serverUser.getUsername() + " > " + user.getUsername() + " is now CONNECTED");
+				System.out.println("\t\tIP address: " + clientIPaddress.toString());
 				//broadcast the connectedUser vector to all connected users/server
 				//TODO implement broadcast the newly added user to everyone
+				System.out.println(serverUser.getUsername() + " > connectedUserHashT.size() : " + connectedUsersHashT.size());
+				System.out.println("------------------------------------------------------------");
 				break;
 			}
 			case DISCONNECT:
 			{
+				System.out.println("------------------------------------------------------------");
 				//get the client and remove it from the connectedUser vector
 				User user = message.getSource();
-				for (int i = 0; i < connectedUser.size(); i++)
-				{
-//					if (connectedUser.get(i).getUsername().equals(user.getUsername()))
-					if (connectedUsersHashT.get(user.getUsername()) != null)
-					{
-//						connectedUser.remove(i);
-						connectedUsersHashT.remove(user.getUsername());
-					}
-				}
+				connectedUsersHashT.remove(user.getUsername());
+				System.out.println(serverUser.getUsername() + " > " + user.getUsername() + "is now DISCONNECTED");
+				System.out.println(serverUser.getUsername() + " > connectedUserHashT.size() : " + connectedUsersHashT.size());
+				System.out.println("------------------------------------------------------------");
+				
+//				for (int i = 0; i < connectedUser.size(); i++)
+//				{
+////					if (connectedUser.get(i).getUsername().equals(user.getUsername()))
+//					if (connectedUsersHashT.get(user.getUsername().toString()) != null)
+//					{
+////						connectedUser.remove(i);
+//						connectedUsersHashT.remove(user.getUsername());
+//						System.out.println(serverUser.getUsername() + " > " + user.getUsername() + "is now DISCONNECTED");
+//					}
+//				}
 				//broadcast the connectUser vector to all connected users/server
 				//TODO implement broadcast the updated userList vector to everyone
 				break;
