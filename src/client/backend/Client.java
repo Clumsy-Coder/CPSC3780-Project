@@ -32,7 +32,6 @@ public class Client
 	private final int MAX_OUTGOING_SIZE = 1024;
 	
 	
-	
 	Client(String serverIP, User user)
 	{
 		this(serverIP, 5555, user);
@@ -86,6 +85,27 @@ public class Client
 		}
 	}
 	
+	private void sendMessage(Message message)
+	{
+		
+		try
+		{
+			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+			ObjectOutputStream    oos          = new ObjectOutputStream(outputStream);
+			oos.writeObject(message);
+			byte[]         data       = outputStream.toByteArray();
+			DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), port);
+			udpSocket.send(sendPacket);
+			
+		}
+		catch (IOException e)
+		{
+//			e.printStackTrace();
+			System.out.println("Unable to write object or send packet");
+		}
+		
+	}
+	
 	public boolean connect()
 	{
 		//connect to the server.
@@ -134,14 +154,15 @@ public class Client
 		try
 		{
 			udpSocket = new DatagramSocket();
-			InetAddress ipaddress = InetAddress.getLocalHost();
-			Message message = new Message(MessageType.CONNECT, user, null, null);
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-			ObjectOutputStream oos = new ObjectOutputStream(outputStream);
-			oos.writeObject(message);
-			byte [] data = outputStream.toByteArray();
-			DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), 5555);
-			udpSocket.send(packet);
+//			InetAddress           ipaddress    = InetAddress.getLocalHost();
+			Message               message      = new Message(MessageType.CONNECT, user, null, null);
+//			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+//			ObjectOutputStream    oos          = new ObjectOutputStream(outputStream);
+//			oos.writeObject(message);
+//			byte[]         data   = outputStream.toByteArray();
+//			DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), 5555);
+//			udpSocket.send(packet);
+			this.sendMessage(message);
 			
 		}
 		catch (SocketException e)
@@ -150,18 +171,18 @@ public class Client
 			System.out.println(user.getUsername() + " > unable to create UDP socket");
 			keepGoing = false;
 		}
-		catch (UnknownHostException e)
-		{
-//			e.printStackTrace();
-			System.out.println(user.getUsername() + " > unable to get ipaddress");
-			keepGoing = false;
-		}
-		catch (IOException e)
-		{
-//			e.printStackTrace();
-			System.out.println(user.getUsername() + " > unable to create ObjectOutputStream or unable to write object");
-			keepGoing = false;
-		}
+//		catch (UnknownHostException e)
+//		{
+////			e.printStackTrace();
+//			System.out.println(user.getUsername() + " > unable to get ipaddress");
+//			keepGoing = false;
+//		}
+//		catch (IOException e)
+//		{
+////			e.printStackTrace();
+//			System.out.println(user.getUsername() + " > unable to create ObjectOutputStream or unable to write object");
+//			keepGoing = false;
+//		}
 		
 		return keepGoing;
 		
@@ -175,28 +196,31 @@ public class Client
 		//server will remove current user from the database as connected user
 		keepGoing = false;
 		Message message = new Message(MessageType.DISCONNECT, user, null, null);
-		try
-		{
-			//send a message to the server that you are disconnecting.
-			sOutput.writeObject(message);
-			//close the I/O streams
-			if (sInput != null)
-			{
-				sInput.close();
-			}
-			if (sOutput != null)
-			{
-				sOutput.close();
-			}
-			if (socket != null)
-			{
-				socket.close();
-			}
-		}
-		catch (IOException e)
-		{
-			e.printStackTrace();
-		}
+//		try
+//		{
+//			//send a message to the server that you are disconnecting.
+//			sOutput.writeObject(message);
+//			//close the I/O streams
+//			if (sInput != null)
+//			{
+//				sInput.close();
+//			}
+//			if (sOutput != null)
+//			{
+//				sOutput.close();
+//			}
+//			if (socket != null)
+//			{
+//				socket.close();
+//			}
+//		}
+//		catch (IOException e)
+//		{
+//			e.printStackTrace();
+//		}
+		this.sendMessage(message);
+		
+		
 	}
 	
 	private void sendGetRequest()
