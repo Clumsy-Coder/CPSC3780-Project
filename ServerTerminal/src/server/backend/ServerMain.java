@@ -11,9 +11,24 @@ public class ServerMain
 	                                        IOException,
 	                                        ClassNotFoundException
 	{
-		Server server = new Server("Server1");
+		String serverName;
+		int port;
+		if(args.length == 2)
+		{
+			serverName = args[0];
+			port = Integer.parseInt(args[1]);
+			
+		}
+		else
+		{
+			System.out.println("Invalid number of arguments. Need 2");
+			System.out.println("serverName port");
+			return;
+		}
+		
+		Server server = new Server(serverName, port);
 		server.startServer();
-		System.out.println("random text in ServerMain.java");
+		System.out.println("Stopping server");
 		server.stopServer();
 	}
 }
