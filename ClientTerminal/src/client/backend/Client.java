@@ -253,33 +253,46 @@ public class Client
 		Message message = null;
 		try
 		{
-			if (keepGoing)
-			{
-				byte[]         incomingData   = new byte[MAX_INCOMING_SIZE];
-				DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
-				udpSocket.receive(incomingPacket);
-				byte[]               data        = incomingPacket.getData();
-				ByteArrayInputStream in          = new ByteArrayInputStream(data);
-				ObjectInputStream    inputStream = new ObjectInputStream(in);
-				//read the object
-				message = (Message) inputStream.readObject();
-				inputStream.close();
-				in.close();
+			System.out.println("Message read 1 ");
+			byte[]         incomingData   = new byte[MAX_INCOMING_SIZE];
+			
+			System.out.println("Message read 2 ");
+			DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+			
+			System.out.println("Message read 3 ");
+			udpSocket.receive(incomingPacket);
+			
+			System.out.println("Message read 4 ");
+			byte[]               data        = incomingPacket.getData();
+			
+			System.out.println("Message read 5 ");
+			ByteArrayInputStream in          = new ByteArrayInputStream(data);
+			
+			System.out.println("Message read 6 ");
+			ObjectInputStream    inputStream = new ObjectInputStream(in);
+			
+			//read the object
+			System.out.println("Message read 7 ");
+			message = (Message) inputStream.readObject();
+			
+			System.out.println("Message read 8");
+//				inputStream.close();
+//				in.close();
 //			udpSocket.close();
-			}
+			
 			
 		}
 		catch (IOException e)
 		{
-			e.printStackTrace();
-			keepGoing = false;
+//			e.printStackTrace();
 			System.out.println(user.getUsername() + " > Unable to read Message: readMessage()");
+			keepGoing = false;
 		}
 		catch (ClassNotFoundException e)
 		{
 //			e.printStackTrace();
-			keepGoing = false;
 			System.out.println(user.getUsername() + " > Class not found : readMessage()");
+			keepGoing = false;
 		}
 		
 		return message;
@@ -289,8 +302,10 @@ public class Client
 	{
 		public void run()
 		{
+			System.out.println("ListenFromServer thread started");
 			while (keepGoing)
 			{
+				System.out.println(keepGoing);
 //				try
 //				{
 //					udpSocket = new DatagramSocket();
@@ -299,26 +314,31 @@ public class Client
 //				{
 //					e.printStackTrace();
 //				}
-				if (!keepGoing)
-				{
-					return;
-				}
+//				if (!keepGoing)
+//				{
+//					return;
+//				}
 //				try
 //				{
 //					Message msg = (Message) sInput.readObject();
+				System.out.println("Calling readMessage");
 				Message msg = readMessage();
+				System.out.println("after readMessage");
 				//check what type of message it is.
 				//possible types received:
 				//  GET
 				//  ACK
 				//  USERS
-				if (msg == null)
-				{
-					return;
-				}
+				System.out.println(user.getUsername() + " > MessageType: " + msg.getMessageType());
+//				if (msg == null)
+//				{
+//					continue;
+//				}
+				
 				
 				switch (msg.getMessageType())
 				{
+					
 					case GET:
 					{
 						//System.out.println("\n" + user.getUsername() + " > " + "GET request replied");
@@ -340,6 +360,7 @@ public class Client
 						//get the message
 						//print it
 						//send ACK
+						System.out.println(user.getUsername() + " > inside GET switch");
 						String message = (String) msg.getPayload();
 						System.out.println(msg.getSource().getUsername() + " > " + message);
 						Message ackMessage = new Message(MessageType.ACK, user, msg.getSource(), null);
@@ -386,6 +407,7 @@ public class Client
 	{
 		public void run()
 		{
+			System.out.println("SendGET_request thread started");
 			while (keepGoing)
 			{
 				if (!keepGoing)

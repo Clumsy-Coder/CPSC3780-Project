@@ -138,7 +138,7 @@ public class Server
 		try
 		{
 			socket = new DatagramSocket(port);
-			System.out.println("Server up and running on port: " + port);
+			System.out.println("Server up and running on port: " + Inet4Address.getLocalHost().getHostAddress() + ":" + port);
 //			byte[] incomingData = new byte[MAX_INCOMING_SIZE];
 			keepGoing = true;
 			while (keepGoing)
@@ -170,10 +170,14 @@ public class Server
 		{
 			System.out.println(serverUser.getUsername() + " > Unable to create DatagramSocket");
 		}
-		catch (IOException e)
+		catch (UnknownHostException e)
 		{
-			System.out.println(serverUser.getUsername() + " > Unable to receive packet.");
+			e.printStackTrace();
 		}
+//		catch (IOException e)
+//		{
+//			System.out.println(serverUser.getUsername() + " > Unable to receive packet.");
+//		}
 //		catch (ClassNotFoundException e)
 //		{
 //			System.out.println(serverUser.getUsername() + " > Unable to read Message object");
@@ -222,7 +226,7 @@ public class Server
 			byte[] sendData = baos.toByteArray();
 			DatagramPacket sendPacket = new DatagramPacket(sendData,
 			                                               sendData.length,
-			                                               connectedUsersHashT.get(destination.getUsername()),
+			                                               connectedUsersHashT.get(source.getUsername()),
 			                                               port);
 			socket.send(sendPacket);
 		}
@@ -278,6 +282,7 @@ public class Server
 				System.out.println("------------------------------------------------------------");
 				//get the message and store it in messageBuffer
 				System.out.println(serverUser.getUsername() + " > message from: " + message.getSource().getUsername());
+				System.out.println("\t\tTo: " + message.getDestination().getUsername());
 				System.out.println("\t\tContent: " + message.getPayload().toString());
 				messageBuffer.add(message);
 				System.out.println("------------------------------------------------------------");
@@ -285,15 +290,15 @@ public class Server
 			}
 			case GET:
 			{
-				System.out.println("------------------------------------------------------------");
+//				System.out.println("------------------------------------------------------------");
 				//get the message that is destined to to client B
 				//send the message to client B
 				
 				//using a new thread in case there's multiple messages that needs to be sent
-				System.out.println(serverUser.getUsername() + " > GET request from " + message.getSource().getUsername());
+//				System.out.println(serverUser.getUsername() + " > GET request from " + message.getSource().getUsername());
 				Runnable tempThread = () ->
 				{
-					
+					System.out.println("running tempThread");
 					for (int i = 0; i < messageBuffer.size(); i++)
 					{
 						//get the message that is destined to client B
@@ -309,11 +314,14 @@ public class Server
 					//send each message to Client B
 					for (int i = 0; i < GET_MessageBuffer.size(); i++)
 					{
+						System.out.println(serverUser.getUsername() + " > Sending GET to: " + connectedUsersHashT.get(GET_MessageBuffer.get(i).getDestination().getUsername()));
 						this.sendMessage(MessageType.GET,
 						                 GET_MessageBuffer.get(i).getSource(),
-						                 message.getDestination(),
+						                 GET_MessageBuffer.get(i).getDestination(),
 						                 GET_MessageBuffer.get(i).getPayload());
 					}
+					
+					System.out.println("Exiting tempThread");
 					
 				};
 				
@@ -322,7 +330,7 @@ public class Server
 					new Thread(tempThread).start();
 				}
 				
-				System.out.println("------------------------------------------------------------");
+//				System.out.println("------------------------------------------------------------");
 				break;
 			}
 			case ACK:
@@ -376,7 +384,7 @@ public class Server
 				//get the client and remove it from the connectedUser vector
 				User user = message.getSource();
 				connectedUsersHashT.remove(user.getUsername());
-				System.out.println(serverUser.getUsername() + " > " + user.getUsername() + "is now DISCONNECTED");
+				System.out.println(serverUser.getUsername() + " > " + user.getUsername() + " is now DISCONNECTED");
 				System.out.println(serverUser.getUsername() + " > connectedUserHashT.size() : " + connectedUsersHashT.size());
 				System.out.println("------------------------------------------------------------");
 				
