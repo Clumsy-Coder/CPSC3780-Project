@@ -4,13 +4,9 @@ import utilities.Message;
 import utilities.MessageType;
 import utilities.User;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
-import java.util.Vector;
 
 /**
  * Class used to communicate with the server
@@ -30,6 +26,8 @@ public class Client
 	private DatagramSocket udpSocket;
 	private final int MAX_INCOMING_SIZE = 1024;
 	private final int MAX_OUTGOING_SIZE = 1024;
+	private ListenFromServer serverListen;
+	private SendGET_request  getRequestThread;
 	
 	
 	Client(String serverIP, User user)
@@ -73,16 +71,17 @@ public class Client
 	protected void sendMessage(String textMessage, User destination)
 	{
 		Message message = new Message(MessageType.SEND, user, destination, textMessage);
-		try
-		{
-			sOutput.writeObject(message);
-		}
-		catch (IOException e)
-		{
-//			e.printStackTrace();
-			System.out.println("Unable to send message from : " + message.getSource().getUsername().toString());
-			System.out.println("Message content: " + message.getPayload().toString());
-		}
+//		try
+//		{
+//			sOutput.writeObject(message);
+		this.sendMessage(message);
+//		}
+//		catch (IOException e)
+//		{
+////			e.printStackTrace();
+//			System.out.println("Unable to send message from : " + message.getSource().getUsername().toString());
+//			System.out.println("Message content: " + message.getPayload().toString());
+//		}
 	}
 	
 	private void sendMessage(Message message)
@@ -96,12 +95,17 @@ public class Client
 			byte[]         data       = outputStream.toByteArray();
 			DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), port);
 			udpSocket.send(sendPacket);
+
+//			udpSocket.close();
+			oos.close();
+			outputStream.close();
 			
 		}
 		catch (IOException e)
 		{
 //			e.printStackTrace();
-			System.out.println("Unable to write object or send packet");
+			keepGoing = false;
+			System.out.println("Unable to write object or send packet : sendMessage(Message)");
 		}
 		
 	}
@@ -155,21 +159,29 @@ public class Client
 		{
 			udpSocket = new DatagramSocket();
 //			InetAddress           ipaddress    = InetAddress.getLocalHost();
-			Message               message      = new Message(MessageType.CONNECT, user, null, null);
+			Message message = new Message(MessageType.CONNECT, user, null, null);
 //			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 //			ObjectOutputStream    oos          = new ObjectOutputStream(outputStream);
 //			oos.writeObject(message);
 //			byte[]         data   = outputStream.toByteArray();
 //			DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), 5555);
 //			udpSocket.send(packet);
+			
+			serverListen = new ListenFromServer();
+			serverListen.start();
+			System.out.println(user.getUsername() + " > listening to server");
+			getRequestThread = new SendGET_request();
+			getRequestThread.start();
 			this.sendMessage(message);
+//			System.out.println(user.getUsername() + " > SendGET_request thread started");
 			
 		}
 		catch (SocketException e)
 		{
 //			e.printStackTrace();
-			System.out.println(user.getUsername() + " > unable to create UDP socket");
+			System.out.println(user.getUsername() + " > unable to create UDP socket : connect()");
 			keepGoing = false;
+			return keepGoing;
 		}
 //		catch (UnknownHostException e)
 //		{
@@ -194,7 +206,6 @@ public class Client
 		//disconnect the server.
 		//make sure the output and input streams are closed.
 		//server will remove current user from the database as connected user
-		keepGoing = false;
 		Message message = new Message(MessageType.DISCONNECT, user, null, null);
 //		try
 //		{
@@ -219,7 +230,15 @@ public class Client
 //			e.printStackTrace();
 //		}
 		this.sendMessage(message);
-		
+		keepGoing = false;
+		if (udpSocket != null)
+		{
+			udpSocket.close();
+			
+		}
+		serverListen.stop();
+		getRequestThread.stop();
+		System.out.println(user.getUsername() + " > Connection closed");
 		
 	}
 	
@@ -229,75 +248,136 @@ public class Client
 		//if the server replies, update the message list.
 	}
 	
+	private Message readMessage()
+	{
+		Message message = null;
+		try
+		{
+			if (keepGoing)
+			{
+				byte[]         incomingData   = new byte[MAX_INCOMING_SIZE];
+				DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
+				udpSocket.receive(incomingPacket);
+				byte[]               data        = incomingPacket.getData();
+				ByteArrayInputStream in          = new ByteArrayInputStream(data);
+				ObjectInputStream    inputStream = new ObjectInputStream(in);
+				//read the object
+				message = (Message) inputStream.readObject();
+				inputStream.close();
+				in.close();
+//			udpSocket.close();
+			}
+			
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+			keepGoing = false;
+			System.out.println(user.getUsername() + " > Unable to read Message: readMessage()");
+		}
+		catch (ClassNotFoundException e)
+		{
+//			e.printStackTrace();
+			keepGoing = false;
+			System.out.println(user.getUsername() + " > Class not found : readMessage()");
+		}
+		
+		return message;
+	}
+	
 	private class ListenFromServer extends Thread
 	{
 		public void run()
 		{
 			while (keepGoing)
 			{
-				try
-				{
-					Message msg = (Message) sInput.readObject();
-					
-					//check what type of message it is.
-					//possible types received:
-					//  GET
-					//  ACK
-					//  USERS
-					
-					switch (msg.getMessageType())
-					{
-						case GET:
-						{
-							//System.out.println("\n" + user.getUsername() + " > " + "GET request replied");
-							Vector<Message> msgList = (Vector<Message>) msg.getPayload();
-							for (int i = 0; i < msgList.size(); i++)
-							{
-								System.out.println(
-									msg.getSource().getUsername() + " > " + msgList.get(i).getPayload() + "\n");
-							}
-							
-							if (msgList.size() > 0)
-							{
-								//send a ACK
-								Message message = new Message(MessageType.ACK, user, msg.getSource(), null);
-								sOutput.writeObject(message);
-								
-							}
-							
-							break;
-						}
-						case ACK:
-						{
-							System.out.println(
-								user.getUsername() + " > " + "ACK message recieved from " + msg.getSource()
-									.getUsername());
-							break;
-						}
-						case USERS:
-						{
-							System.out.println(user.getUsername() + " > " + "USERS message recieved.");
-							break;
-						}
-						default:
-						{
-							System.out.println(
-								user.getUsername() + " > " + "unknown MessageType received : " + msg.getMessageType());
-							break;
-						}
-					}
-					
-				}
-				catch (IOException e)
-				{
+//				try
+//				{
+//					udpSocket = new DatagramSocket();
+//				}
+//				catch (SocketException e)
+//				{
 //					e.printStackTrace();
-					System.out.println(user.getUsername() + " > Connection closed. Exiting");
-					keepGoing = false;
-				}
-				catch (ClassNotFoundException e)
+//				}
+				if (!keepGoing)
 				{
-					e.printStackTrace();
+					return;
 				}
+//				try
+//				{
+//					Message msg = (Message) sInput.readObject();
+				Message msg = readMessage();
+				//check what type of message it is.
+				//possible types received:
+				//  GET
+				//  ACK
+				//  USERS
+				if (msg == null)
+				{
+					return;
+				}
+				
+				switch (msg.getMessageType())
+				{
+					case GET:
+					{
+						//System.out.println("\n" + user.getUsername() + " > " + "GET request replied");
+//							Vector<Message> msgList = (Vector<Message>) msg.getPayload();
+//							for (int i = 0; i < msgList.size(); i++)
+//							{
+//								System.out.println(
+//									msg.getSource().getUsername() + " > " + msgList.get(i).getPayload() + "\n");
+//							}
+//
+//							if (msgList.size() > 0)
+//							{
+//								//send a ACK
+//								Message message = new Message(MessageType.ACK, user, msg.getSource(), null);
+//								sOutput.writeObject(message);
+//
+//							}
+						
+						//get the message
+						//print it
+						//send ACK
+						String message = (String) msg.getPayload();
+						System.out.println(msg.getSource().getUsername() + " > " + message);
+						Message ackMessage = new Message(MessageType.ACK, user, msg.getSource(), null);
+						sendMessage(ackMessage);
+						
+						break;
+					}
+					case ACK:
+					{
+						System.out.println(
+							user.getUsername() + " > " + "ACK message recieved from " + msg.getSource()
+								.getUsername());
+						break;
+					}
+					case USERS:
+					{
+						System.out.println(user.getUsername() + " > " + "USERS message recieved.");
+						break;
+					}
+					default:
+					{
+						System.out.println(
+							user.getUsername() + " > " + "unknown MessageType received : " + msg.getMessageType());
+						break;
+					}
+				}
+
+//				}
+//				catch (IOException e)
+//				{
+////					e.printStackTrace();
+//					System.out.println(user.getUsername() + " > Connection closed. Exiting");
+//					keepGoing = false;
+//				}
+//				catch (ClassNotFoundException e)
+//				{
+//					e.printStackTrace();
+//				}
 			}
 		}
 	}
@@ -308,21 +388,29 @@ public class Client
 		{
 			while (keepGoing)
 			{
+				if (!keepGoing)
+				{
+					return;
+				}
+				
 				Message message = new Message(MessageType.GET, user, null, null);
 				try
 				{
 					Thread.sleep(2000);
-					sOutput.writeObject(message);
+//					sOutput.writeObject(message);
+					sendMessage(message);
 				}
-				catch (IOException e)
-				{
-//					e.printStackTrace();
-					System.out.println("from SendGET_request: closing thread.");
-				}
+//				catch (IOException e)
+//				{
+////					e.printStackTrace();
+//					System.out.println("from SendGET_request: closing thread.");
+//				}
 				catch (InterruptedException e)
 				{
 //					e.printStackTrace();
+					keepGoing = false;
 					System.out.println("from SendGET_request: Thread.sleep() failed");
+					
 				}
 			}
 		}
