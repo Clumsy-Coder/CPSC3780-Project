@@ -15,7 +15,7 @@ public class Client
 {
 	private static String             serverIP;
 	private static User               user;
-	private        int                port;
+	private        int                port = 5555;
 	private        ArrayList<User>    connectedUsers;
 	private        ObjectOutputStream sOutput;  // I/O
 	private        ObjectInputStream  sInput;   // I/O
@@ -89,16 +89,24 @@ public class Client
 		
 		try
 		{
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-			ObjectOutputStream    oos          = new ObjectOutputStream(outputStream);
+//			System.out.println(user.getUsername() + " > to: " + ((message.getDestination() != null) ? message.getDestination().getUsername() : serverIP) );
+//			System.out.println("\t\tDestination IP address: " + InetAddress.getByName(serverIP));
+//			System.out.println("\t\tPort: " + port);
+			
+			
+			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
 			oos.writeObject(message);
-			byte[]         data       = outputStream.toByteArray();
-			DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName(serverIP), port);
+			byte[]         sendData   = byteArrayOutputStream.toByteArray();
+			DatagramPacket sendPacket = new DatagramPacket(sendData,
+			                                               sendData.length,
+			                                               InetAddress.getByName(serverIP),
+			                                               port);
 			udpSocket.send(sendPacket);
 
 //			udpSocket.close();
 			oos.close();
-			outputStream.close();
+			byteArrayOutputStream.close();
 			
 		}
 		catch (IOException e)
@@ -157,7 +165,7 @@ public class Client
 		
 		try
 		{
-			udpSocket = new DatagramSocket();
+			udpSocket = new DatagramSocket(port);
 //			InetAddress           ipaddress    = InetAddress.getLocalHost();
 			Message message = new Message(MessageType.CONNECT, user, null, null);
 //			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -178,7 +186,7 @@ public class Client
 		}
 		catch (SocketException e)
 		{
-//			e.printStackTrace();
+			e.printStackTrace();
 			System.out.println(user.getUsername() + " > unable to create UDP socket : connect()");
 			keepGoing = false;
 			return keepGoing;
@@ -254,7 +262,7 @@ public class Client
 		try
 		{
 			System.out.println("Message read 1 ");
-			byte[]         incomingData   = new byte[MAX_INCOMING_SIZE];
+			byte[] incomingData = new byte[MAX_INCOMING_SIZE];
 			
 			System.out.println("Message read 2 ");
 			DatagramPacket incomingPacket = new DatagramPacket(incomingData, incomingData.length);
@@ -263,13 +271,13 @@ public class Client
 			udpSocket.receive(incomingPacket);
 			
 			System.out.println("Message read 4 ");
-			byte[]               data        = incomingPacket.getData();
+			byte[] data = incomingPacket.getData();
 			
 			System.out.println("Message read 5 ");
-			ByteArrayInputStream in          = new ByteArrayInputStream(data);
+			ByteArrayInputStream in = new ByteArrayInputStream(data);
 			
 			System.out.println("Message read 6 ");
-			ObjectInputStream    inputStream = new ObjectInputStream(in);
+			ObjectInputStream inputStream = new ObjectInputStream(in);
 			
 			//read the object
 			System.out.println("Message read 7 ");
