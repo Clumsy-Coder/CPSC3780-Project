@@ -138,7 +138,8 @@ public class Server
 		try
 		{
 			socket = new DatagramSocket(port);
-			System.out.println("Server up and running on port: " + Inet4Address.getLocalHost().getHostAddress() + ":" + port);
+			System.out.println("Server up and running on port: " + Inet4Address.getLocalHost()
+				.getHostAddress() + ":" + port);
 //			byte[] incomingData = new byte[MAX_INCOMING_SIZE];
 			keepGoing = true;
 			while (keepGoing)
@@ -220,15 +221,23 @@ public class Server
 		
 		try
 		{
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			ObjectOutputStream    oos  = new ObjectOutputStream(baos);
+			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
 			oos.writeObject(message);
-			byte[] sendData = baos.toByteArray();
+			byte[] sendData  = byteArrayOutputStream.toByteArray();
+			String ipaddress = connectedUsersHashT.get(destination.getUsername()).toString();
+			System.out.println("IPaddress: " + ipaddress);
 			DatagramPacket sendPacket = new DatagramPacket(sendData,
 			                                               sendData.length,
-			                                               connectedUsersHashT.get(source.getUsername()),
+			                                               connectedUsersHashT.get(destination.getUsername()),
 			                                               port);
+			System.out.println("Sending to: " + destination.getUsername() + " : " + connectedUsersHashT.get(destination.getUsername()));
+			System.out.println("\t\tsendData.size() : " + sendData.length);
+			System.out.println("\t\tPacket size: " + sendPacket.getLength());
+			
 			socket.send(sendPacket);
+			oos.close();
+			byteArrayOutputStream.close();
 		}
 		catch (IOException e)
 		{
@@ -314,7 +323,8 @@ public class Server
 					//send each message to Client B
 					for (int i = 0; i < GET_MessageBuffer.size(); i++)
 					{
-						System.out.println(serverUser.getUsername() + " > Sending GET to: " + connectedUsersHashT.get(GET_MessageBuffer.get(i).getDestination().getUsername()));
+						System.out.println(serverUser.getUsername() + " > Sending GET to: " + connectedUsersHashT.get(
+							GET_MessageBuffer.get(i).getDestination().getUsername()));
 						this.sendMessage(MessageType.GET,
 						                 GET_MessageBuffer.get(i).getSource(),
 						                 GET_MessageBuffer.get(i).getDestination(),
@@ -325,11 +335,11 @@ public class Server
 					
 				};
 				
-				if(messageBuffer.size() > 0)
+				if (messageBuffer.size() > 0)
 				{
 					new Thread(tempThread).start();
 				}
-				
+
 //				System.out.println("------------------------------------------------------------");
 				break;
 			}
@@ -387,7 +397,7 @@ public class Server
 				System.out.println(serverUser.getUsername() + " > " + user.getUsername() + " is now DISCONNECTED");
 				System.out.println(serverUser.getUsername() + " > connectedUserHashT.size() : " + connectedUsersHashT.size());
 				System.out.println("------------------------------------------------------------");
-				
+
 //				for (int i = 0; i < connectedUser.size(); i++)
 //				{
 ////					if (connectedUser.get(i).getUsername().equals(user.getUsername()))
