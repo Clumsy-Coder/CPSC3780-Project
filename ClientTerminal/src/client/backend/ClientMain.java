@@ -12,9 +12,31 @@ public class ClientMain
 	public static void main(String[] args)
 	{
 		int    port     = 5555;
-		String serverIP = "localhost";
-		String username = "Anonymous";
-		//String username = "Anonymous2";
+		String serverIP = "192.168.2.12";
+		String username;
+		String recipient = "";
+		
+		if(args.length == 3)
+		{
+			username = args[0];
+			serverIP = args[1];
+		    port = Integer.parseInt(args[2]);
+		}
+		
+		else if(args.length == 4)
+		{
+			username = args[0];
+			serverIP = args[1];
+			port = Integer.parseInt(args[2]);
+			recipient = args[3];
+		}
+		
+		else
+		{
+			System.out.println("Invalid number of arguments. Need 3 arguments");
+			System.out.println("Username serverIP port");
+			return;
+		}
 
 		User   user   = new User(username);
 		Client client = new Client(serverIP, port, user);
@@ -28,6 +50,10 @@ public class ClientMain
 		boolean keepGoing = true;
 		while (keepGoing)
 		{
+			if(!keepGoing)
+			{
+				break;
+			}
 			System.out.print(username + "> ");
 			String line = scan.nextLine();
 			//if logout was typed
@@ -36,12 +62,13 @@ public class ClientMain
 				//send a message to the server that you are disconnecting.
 				keepGoing = false;
 				System.out.println("Logged off");
+//				client.disconnect();
 
 			}
 			else
 			{
-				client.sendMessage(line, new User("Anonymous2"));
-				//client.sendMessage(line, new User("Anonymous"));
+				client.sendMessage(line, new User(recipient));
+				
 			}
 		}
 		client.disconnect();
