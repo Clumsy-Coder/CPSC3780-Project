@@ -2,8 +2,8 @@ package server.backend;
 
 import utilities.Message;
 import utilities.MessageType;
-import utilities.NetworkInfo;
 import utilities.User;
+import utilities.UserNetworkInfo;
 
 import java.io.*;
 import java.math.BigInteger;
@@ -25,9 +25,9 @@ public class Server
 	//UDP
 	private DatagramSocket udpSocket;
 	private final int MAX_INCOMING_SIZE = 1024;
-	private Hashtable<User, NetworkInfo> connectedUsersHashT;
-	private Vector<Message>                GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is recieved for each message
-	private InetAddress                    clientIPaddress;
+	private Vector<UserNetworkInfo> connectedUsersHashT;
+	private Vector<Message>         GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is recieved for each message
+	private InetAddress             clientIPaddress;
 	
 	/**
 	 * Server starts in serverPort 5555
@@ -49,7 +49,7 @@ public class Server
 		this.serverPort = serverPort;
 		messageBuffer = new Vector<Message>();
 		GET_MessageBuffer = new Vector<Message>();
-		connectedUsersHashT = new Hashtable<User, NetworkInfo>();
+		connectedUsersHashT = new Vector<UserNetworkInfo>();
 		
 	}//END CONSTRUCTOR Server(String, serverPort)
 	
@@ -100,18 +100,46 @@ public class Server
 	private synchronized void broadcastUserList(Message message)
 	{
 //		Vector<NetworkInfo> broadCastVector = new Vector<>(connectedUsersHashT.values());
-		Iterator  it = connectedUsersHashT.entrySet().iterator();
+		Iterator <UserNetworkInfo> it = connectedUsersHashT.iterator();
 		//send the message to all clients connected to the server.
-		while(it.hasNext())
+		while (it.hasNext())
 		{
-			Map.Entry<String, NetworkInfo> pair = (Map.Entry)it.next();
+//			Map.Entry<String, UserNetworkInfo> pair = (Map.Entry) it.next();
 			Message broadcastMessage = new Message(message.getMessageType(),
 			                                       serverUser,
-			                                       new User(pair.getKey()),
+			                                       it.next().getUser(),
 			                                       message.getPayload());
 			this.sendMessage(broadcastMessage);
 			it.remove();
 			
+		}
+	}
+	
+	private synchronized UserNetworkInfo getClient(User user)
+	{
+		UserNetworkInfo connectedClient = null;
+		
+		for(int i = 0; i < connectedUsersHashT.size(); i++)
+		{
+			if(connectedUsersHashT.get(i).getUser().getUsername().equals(user.getUsername()))
+			{
+				connectedClient = connectedUsersHashT.get(i);
+				return connectedClient;
+			}
+		}
+		
+		return connectedClient;
+	}
+	
+	private synchronized void removeClient(User user)
+	{
+		for(int i = 0; i < connectedUsersHashT.size(); i++)
+		{
+			if(connectedUsersHashT.get(i).getUser().getUsername().equals(user.getUsername()))
+			{
+				connectedUsersHashT.remove(i);
+				return;
+			}
 		}
 	}
 	
@@ -126,10 +154,11 @@ public class Server
 			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
 			oos.writeObject(sendMessage);
 			byte[] sendData = byteArrayOutputStream.toByteArray();
-			InetAddress destinationIP = connectedUsersHashT.get(sendMessage.getDestination()
-				                                                           .getUsername())
-																		   .getIpAddress();
-			int destinationPort = connectedUsersHashT.get(sendMessage.getDestination().getUsername()).getPort();
+//			InetAddress destinationIP = connectedUsersHashT.get(sendMessage.getDestination()
+//				                                                    .getUsername()).getIpAddress();
+			InetAddress destinationIP = this.getClient(sendMessage.getDestination()).getIpAddress();
+			int destinationPort = this.getClient(sendMessage.getDestination()).getPort();
+//			int destinationPort = connectedUsersHashT.get(sendMessage.getDestination().getUsername()).getPort();
 			DatagramPacket sendPacket = new DatagramPacket(sendData,
 			                                               sendData.length,
 //			                                               connectedUsersHashT.get(sendMessage.getDestination()
@@ -268,8 +297,8 @@ public class Server
 						//  payload: text message
 						//  NOTE: sequence number is embedded.
 						
-						System.out.println(serverUser.getUsername() + " > Sending GET to: " + connectedUsersHashT.get(
-							GET_MessageBuffer.get(i).getDestination().getUsername()));
+						System.out.println(serverUser.getUsername() + " > Sending GET to: " + this.getClient(
+							GET_MessageBuffer.get(i).getDestination()).getIpAddress());
 						Message getMessage = new Message(MessageType.GET,
 						                                 GET_MessageBuffer.get(i).getSource(),
 						                                 GET_MessageBuffer.get(i).getDestination(),
@@ -320,7 +349,9 @@ public class Server
 					//  payload: sequence number
 					
 					//check for the sequence number, source and destination
-					if (GET_MessageBuffer.get(i).getSequenceNumber().compareTo((BigInteger)message.getPayload()) == 0 &&
+					if (GET_MessageBuffer.get(i)
+						.getSequenceNumber()
+						.compareTo((BigInteger) message.getPayload()) == 0 &&
 						GET_MessageBuffer.get(i).getSource().getUsername().equals(message.getDestination()) &&
 						GET_MessageBuffer.get(i).getDestination().getUsername().equals(message.getSource()))
 					{
@@ -374,20 +405,21 @@ public class Server
 				
 				System.out.println("------------------------------------------------------------");
 				//get the client and add it to the connectedUser vector
-				User        user         = message.getSource();
-				NetworkInfo clientIPInfo = new NetworkInfo(clientIPaddress, clientPort);
+				User            user         = message.getSource();
+				UserNetworkInfo clientIPInfo = new UserNetworkInfo(clientIPaddress, clientPort, user);
 //				connectedUsersHashT.put(user.getUsername(), clientIPaddress);
 				System.out.println(serverUser.getUsername() + " > User: '" + user.getUsername() + "' is now CONNECTED");
 				
 				//todo tell the newly connected client who is currently connected
-				Iterator  it = connectedUsersHashT.entrySet().iterator();
+				Iterator <UserNetworkInfo> it = connectedUsersHashT.iterator();
 				//send the message to all clients connected to the server.
-				while(it.hasNext())
+				while (it.hasNext())
 				{
-					Map.Entry<String, NetworkInfo> pair = (Map.Entry)it.next();
+//					Map.Entry<String, UserNetworkInfo> pair = (Map.Entry) it.next();
 					Message broadcastMessage = new Message(MessageType.USERS,
 					                                       serverUser,
-					                                       message.getSource(),
+					                                       it.next().getUser(),
+//					                                       message.getSource(),
 					                                       message.getPayload());
 					this.sendMessage(broadcastMessage);
 					it.remove();
@@ -398,7 +430,7 @@ public class Server
 				//let everyone connected to the server know that a new user has connected to the server.
 				//connectedUsersHastT.size() + 1 because you don't want to broadcast to the original sender.
 				//  the original sender would think thats a new user.
-				if(connectedUsersHashT.size() + 1 >= 2)
+				if (connectedUsersHashT.size() + 1 >= 2)
 				{
 					//message format sent
 					//  Type: USERS
@@ -414,7 +446,8 @@ public class Server
 					this.broadcastUserList(newClientMessage);
 					
 				}
-				connectedUsersHashT.put(user, clientIPInfo);
+//				connectedUsersHashT.put(user, clientIPInfo);
+				connectedUsersHashT.add(clientIPInfo);
 				
 				System.out.println("------------------------------------------------------------");
 				break;
@@ -432,12 +465,13 @@ public class Server
 				System.out.println("------------------------------------------------------------");
 				//get the client and remove it from the connectedUser vector
 				User user = message.getSource();
-				connectedUsersHashT.remove(user.getUsername());
+//				connectedUsersHashT.remove(user.getUsername());
+				this.removeClient(user);
 				System.out.println(serverUser.getUsername() + " > User: '" + user.getUsername() + "' is now DISCONNECTED");
 				//broadcast the connectUser vector to all connected users/server
 				//TODO implement broadcast the updated userList vector to everyone
 				//let everyone know who just disconnected
-				if(connectedUsersHashT.size() >= 1)
+				if (connectedUsersHashT.size() >= 1)
 				{
 					//message format sent
 					//  Type: DISCONNECT
