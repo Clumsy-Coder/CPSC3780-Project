@@ -11,35 +11,36 @@ public class ClientMain
 {
 	public static void main(String[] args)
 	{
-		int    port     = 5555;
+		int    serverPort     = 5555;
 		String serverIP = "192.168.2.12";
 		String username;
-		String recipient = "";
+		String recipientUsername = "";
+		int clientPort = 8000;
 		
-		if(args.length == 3)
+		Client client;
+		User user;
+		User recipient;
+		
+		if(args.length == 5)
 		{
 			username = args[0];
 			serverIP = args[1];
-		    port = Integer.parseInt(args[2]);
-		}
-		
-		else if(args.length == 4)
-		{
-			username = args[0];
-			serverIP = args[1];
-			port = Integer.parseInt(args[2]);
-			recipient = args[3];
+			serverPort = Integer.parseInt(args[2]);
+			recipientUsername = args[3];
+			clientPort = Integer.parseInt(args[4]);
+			
+			user = new User(username);
+			recipient = new User(recipientUsername);
+			client = new Client(serverIP, serverPort, clientPort, user);
+			
 		}
 		
 		else
 		{
-			System.out.println("Invalid number of arguments. Need 3 arguments");
-			System.out.println("Username serverIP port");
+			System.out.println("Invalid number of arguments. Need 5 arguments");
+			System.out.println("Username serverIP serverPort recipientUsername clientPort");
 			return;
 		}
-
-		User   user   = new User(username);
-		Client client = new Client(serverIP, port, user);
 
 		if (!client.connect())
 		{
@@ -65,9 +66,13 @@ public class ClientMain
 //				client.disconnect();
 
 			}
+			else if(line.equals("WHOISIN"))
+			{
+				client.whosConnected();
+			}
 			else
 			{
-				client.sendMessage(line, new User(recipient));
+				client.sendMessage(line, recipient);
 				
 			}
 		}
