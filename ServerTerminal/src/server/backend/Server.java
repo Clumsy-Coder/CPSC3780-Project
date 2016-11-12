@@ -2,30 +2,35 @@ package server.backend;
 
 import utilities.Message;
 import utilities.MessageType;
+import utilities.NetworkInfo;
 import utilities.User;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.net.*;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Vector;
 
 
 public class Server
 {
-	private int port = 5555;
+	private int serverPort = 5555;
 	private boolean         keepGoing;
 	private Vector<Message> messageBuffer;
 	private User            serverUser;
+	private int             clientPort;
 	
 	//UDP
 	private DatagramSocket udpSocket;
 	private final int MAX_INCOMING_SIZE = 1024;
-	private Hashtable<String, InetAddress> connectedUsersHashT;
+	private Hashtable<User, NetworkInfo> connectedUsersHashT;
 	private Vector<Message>                GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is recieved for each message
 	private InetAddress                    clientIPaddress;
 	
 	/**
-	 * Server starts in port 5555
+	 * Server starts in serverPort 5555
 	 */
 	Server(String username)
 	{
@@ -34,27 +39,27 @@ public class Server
 	}//END DEFAULT CONSTRUCTOR Server(String)
 	
 	/**
-	 * Server starts on specified port
+	 * Server starts on specified serverPort
 	 *
-	 * @param port
+	 * @param serverPort
 	 */
-	Server(String username, int port)
+	Server(String username, int serverPort)
 	{
 		serverUser = new User(username);
-		this.port = port;
+		this.serverPort = serverPort;
 		messageBuffer = new Vector<Message>();
 		GET_MessageBuffer = new Vector<Message>();
-		connectedUsersHashT = new Hashtable<String, InetAddress>();
+		connectedUsersHashT = new Hashtable<User, NetworkInfo>();
 		
-	}//END CONSTRUCTOR Server(String, port)
+	}//END CONSTRUCTOR Server(String, serverPort)
 	
 	public void startServer()
 	{
 		try
 		{
-			udpSocket = new DatagramSocket(port);
-			System.out.println("Server up and running on port: " + Inet4Address.getLocalHost()
-				.getHostAddress() + ":" + port);
+			udpSocket = new DatagramSocket(serverPort);
+			System.out.println("Server up and running on serverPort: " + Inet4Address.getLocalHost()
+				.getHostAddress() + ":" + serverPort);
 			keepGoing = true;
 			while (keepGoing)
 			{
@@ -92,25 +97,49 @@ public class Server
 	}//END METHOD stopServer()
 	
 	//TODO implement the broadcastUserList method to send every user their updated userList
-	private synchronized void broadcastUserList()
+	private synchronized void broadcastUserList(Message message)
 	{
-		
+//		Vector<NetworkInfo> broadCastVector = new Vector<>(connectedUsersHashT.values());
+		Iterator  it = connectedUsersHashT.entrySet().iterator();
+		//send the message to all clients connected to the server.
+		while(it.hasNext())
+		{
+			Map.Entry<String, NetworkInfo> pair = (Map.Entry)it.next();
+			Message broadcastMessage = new Message(message.getMessageType(),
+			                                       serverUser,
+			                                       new User(pair.getKey()),
+			                                       message.getPayload());
+			this.sendMessage(broadcastMessage);
+			it.remove();
+			
+		}
 	}
 	
-	private synchronized void sendMessage(MessageType messageType, User source, User destination, Object payload)
+	//	private synchronized void sendMessage(MessageType messageType, User source, User destination, Object payload)
+	private synchronized void sendMessage(Message sendMessage)
 	{
-		Message message = new Message(messageType, source, destination, payload);
+//		Message message = new Message(messageType, source, destination, payload);
 		
 		try
 		{
 			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
-			oos.writeObject(message);
+			oos.writeObject(sendMessage);
 			byte[] sendData = byteArrayOutputStream.toByteArray();
+			InetAddress destinationIP = connectedUsersHashT.get(sendMessage.getDestination()
+				                                                           .getUsername())
+																		   .getIpAddress();
+			int destinationPort = connectedUsersHashT.get(sendMessage.getDestination().getUsername()).getPort();
 			DatagramPacket sendPacket = new DatagramPacket(sendData,
 			                                               sendData.length,
-			                                               connectedUsersHashT.get(destination.getUsername()),
-			                                               port);
+//			                                               connectedUsersHashT.get(sendMessage.getDestination()
+//				                                                                              .getUsername())
+//				                                                                              .getIpAddress(),
+                                                           destinationIP,
+//			                                               connectedUsersHashT.get(sendMessage.getDestination()
+//				                                                                              .getUsername())
+//				                                                                              .getPort()
+                                                           destinationPort);
 			
 			udpSocket.send(sendPacket);
 			oos.close();
@@ -139,12 +168,13 @@ public class Server
 			//read the object
 			message = (Message) inputStream.readObject();
 			clientIPaddress = incomingPacket.getAddress();
+			this.clientPort = incomingPacket.getPort();
 			
 		}
 		catch (IOException e)
 		{
 			e.printStackTrace();
-			System.out.println(serverUser.getUsername() + " > unable to recieve packet or read object");
+			System.out.println(serverUser.getUsername() + " > unable to receive packet or read object");
 		}
 		catch (ClassNotFoundException e)
 		{
@@ -179,16 +209,39 @@ public class Server
 			case SEND:
 			{
 				//get the message and store it in messageBuffer
+				//message format received:
+				//  Type: SEND
+				//  source: source (the sender)
+				//  destination: destination (the receiver)
+				//  payload: text message
+				//  NOTE: sequence number must be embedded.
+				System.out.println("------------------------------------------------------------");
 				messageBuffer.add(message);
+				System.out.println(serverUser.getUsername() + " > Message from: '" + message.getSource()
+					.getUsername() + "'");
+				System.out.println("\t\tMessage: " + message.getPayload().toString());
+				System.out.println("------------------------------------------------------------");
 				break;
 				
 			}//END CASE SEND
 			
 			case GET:
 			{
+				//message format received:
+				//  Type: GET
+				//  source: source (the sender)
+				//  destination: server
+				//  payload: null
+				
+				//get the message that is destined to client B
+				//remove it from messageBuffer and place it in GET_MessageBuffer
+				//send the messages destined to client B from GET_MessageBuffer
+				
+				System.out.println("------------------------------------------------------------");
 				//get the message that is destined to to client B
 				//send the message to client B
-				
+				System.out.println(serverUser.getUsername() + " > GET from: '" + message.getSource()
+					.getUsername() + "'");
 				//using a new thread in case there's multiple messages that needs to be sent
 				Runnable tempThread = () ->
 				{
@@ -208,12 +261,24 @@ public class Server
 					//send each message to Client B
 					for (int i = 0; i < GET_MessageBuffer.size(); i++)
 					{
+						//message format sent
+						//  Type: GET
+						//  source: source (the one who the sent the SEND message)
+						//  destination: destination (the one who sent the GET message)
+						//  payload: text message
+						//  NOTE: sequence number is embedded.
+						
 						System.out.println(serverUser.getUsername() + " > Sending GET to: " + connectedUsersHashT.get(
 							GET_MessageBuffer.get(i).getDestination().getUsername()));
-						this.sendMessage(MessageType.GET,
-						                 GET_MessageBuffer.get(i).getSource(),
-						                 GET_MessageBuffer.get(i).getDestination(),
-						                 GET_MessageBuffer.get(i).getPayload());
+						Message getMessage = new Message(MessageType.GET,
+						                                 GET_MessageBuffer.get(i).getSource(),
+						                                 GET_MessageBuffer.get(i).getDestination(),
+						                                 GET_MessageBuffer.get(i).getPayload());
+//						this.sendMessage(MessageType.GET,
+//						                 GET_MessageBuffer.get(i).getSource(),
+//						                 GET_MessageBuffer.get(i).getDestination(),
+//						                 GET_MessageBuffer.get(i).getPayload());
+						this.sendMessage(getMessage);
 					}//END for (int i = 0; i < GET_MessageBuffer.size(); i++)
 					
 				};//END Lambda Runnable FUNCTION
@@ -224,31 +289,53 @@ public class Server
 					
 				}//END if(messageBuffer.size() > 0)
 				
+				System.out.println("------------------------------------------------------------");
 				break;
 				
 			}//END CASE GET
 			
 			case ACK:
 			{
+				//message format received
+				//  Type: ACK
+				//  source: source (the sender)
+				//  destination: destination (who is the sender sending to)
+				//  payload: sequence number
+				
+				System.out.println("------------------------------------------------------------");
+				System.out.println(serverUser.getUsername() + " > ACK from: " + message.getSource().getUsername());
+				System.out.println("\t\tTo: " + message.getDestination().getUsername());
+				System.out.println("\t\tSequence nunmber: " + message.getPayload() != null ?
+				                   message.getPayload().toString() :
+				                   null);
 				//check which message is it being acknowledged for. sequence number, source and destination
 				//foreword the ACK message to the original sender
 				//remove message from messageBuffer
 				for (int i = 0; i < GET_MessageBuffer.size(); i++)
 				{
+					//message format sent
+					//  Type: ACK
+					//  source: source (the one who sent ACK message)
+					//  destination: destination (the one who sent the SEND message)
+					//  payload: sequence number
+					
 					//check for the sequence number, source and destination
-					if (GET_MessageBuffer.get(i).getSequenceNumber() == message.getSequenceNumber() &&
+					if (GET_MessageBuffer.get(i).getSequenceNumber().compareTo((BigInteger)message.getPayload()) == 0 &&
 						GET_MessageBuffer.get(i).getSource().getUsername().equals(message.getDestination()) &&
 						GET_MessageBuffer.get(i).getDestination().getUsername().equals(message.getSource()))
 					{
 						Message ackMessage = GET_MessageBuffer.remove(i);
-						this.sendMessage(MessageType.ACK,
-						                 message.getSource(),
-						                 message.getDestination(),
-//						                 ackMessage.getSequenceNumber());
-                                         null); //temporarily don't send  the sequence number.
+						
+						this.sendMessage(new Message(MessageType.ACK,
+						                             message.getSource(),
+						                             message.getDestination(),
+						                             ackMessage.getSequenceNumber()));
+//                                                     null)); //temporarily don't send  the sequence number.
 					}
 					
 				}//END for (int i = 0; i < GET_MessageBuffer.size(); i++)
+				
+				System.out.println("------------------------------------------------------------");
 				
 				break;
 				
@@ -257,7 +344,15 @@ public class Server
 			case USERS:
 			{
 				System.out.println("------------------------------------------------------------");
-				//send the hashtable to the connected clients, if there are more than 2 clients connected.
+				//let everyone know who just connected to the server.
+				
+				//message format received:
+				//  Type: USERS
+				//  source: server
+				//  destination: user (who are connected)
+				//  payload: User object (must contain initial sequence num)
+				//  NOTE: must contain sequence number.
+				
 				if (connectedUsersHashT.size() >= 2)
 				{
 					
@@ -270,22 +365,94 @@ public class Server
 			
 			case CONNECT:
 			{
+				//message format recieved
+				//  Type: CONNECT
+				//  source: source (the one who is connecting)
+				//  destination: server
+				//  payload: User object
+				//  NOTE: must contain sequence number
+				
+				System.out.println("------------------------------------------------------------");
 				//get the client and add it to the connectedUser vector
-				User user = message.getSource();
-				connectedUsersHashT.put(user.getUsername(), clientIPaddress);
-				//broadcast the connectedUser vector to all connected users/server
+				User        user         = message.getSource();
+				NetworkInfo clientIPInfo = new NetworkInfo(clientIPaddress, clientPort);
+//				connectedUsersHashT.put(user.getUsername(), clientIPaddress);
+				System.out.println(serverUser.getUsername() + " > User: '" + user.getUsername() + "' is now CONNECTED");
+				
+				//todo tell the newly connected client who is currently connected
+				Iterator  it = connectedUsersHashT.entrySet().iterator();
+				//send the message to all clients connected to the server.
+				while(it.hasNext())
+				{
+					Map.Entry<String, NetworkInfo> pair = (Map.Entry)it.next();
+					Message broadcastMessage = new Message(MessageType.USERS,
+					                                       serverUser,
+					                                       message.getSource(),
+					                                       message.getPayload());
+					this.sendMessage(broadcastMessage);
+					it.remove();
+					
+				}
+				
 				//TODO implement broadcast the newly added user to everyone
+				//let everyone connected to the server know that a new user has connected to the server.
+				//connectedUsersHastT.size() + 1 because you don't want to broadcast to the original sender.
+				//  the original sender would think thats a new user.
+				if(connectedUsersHashT.size() + 1 >= 2)
+				{
+					//message format sent
+					//  Type: USERS
+					//  source: server
+					//  destination: all users/servers connected
+					//  payload: User object
+					//  NOTE: must contain sequence number
+					
+					Message newClientMessage = new Message(MessageType.USERS,
+					                                       message.getSource(),
+					                                       null,
+					                                       message.getSource());
+					this.broadcastUserList(newClientMessage);
+					
+				}
+				connectedUsersHashT.put(user, clientIPInfo);
+				
+				System.out.println("------------------------------------------------------------");
 				break;
 				
 			}//END CASE CONNECT
 			
 			case DISCONNECT:
 			{
+				//message format received
+				//  Type: DISCONNECT
+				//  source: source (the sender)
+				//  destination: server
+				//  payload: null
+				
+				System.out.println("------------------------------------------------------------");
 				//get the client and remove it from the connectedUser vector
 				User user = message.getSource();
 				connectedUsersHashT.remove(user.getUsername());
+				System.out.println(serverUser.getUsername() + " > User: '" + user.getUsername() + "' is now DISCONNECTED");
 				//broadcast the connectUser vector to all connected users/server
 				//TODO implement broadcast the updated userList vector to everyone
+				//let everyone know who just disconnected
+				if(connectedUsersHashT.size() >= 1)
+				{
+					//message format sent
+					//  Type: DISCONNECT
+					//  source: server
+					//  destination: all users/servers connected
+					//  payload: User object
+					
+					Message disconnectMessage = new Message(MessageType.DISCONNECT,
+					                                        message.getSource(),
+					                                        null,
+					                                        message.getSource());
+					this.broadcastUserList(disconnectMessage);
+				}
+				System.out.println("------------------------------------------------------------");
+				
 				break;
 				
 			}//END CASE DISCONNECT
