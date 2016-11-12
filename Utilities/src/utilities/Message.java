@@ -93,4 +93,9 @@ public class Message implements Serializable
 	{
 		return sequenceNumber;
 	}
+	
+	public void setSequenceNumber(BigInteger sequenceNumber)
+	{
+		this.sequenceNumber = sequenceNumber;
+	}
 }
