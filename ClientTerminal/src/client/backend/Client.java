@@ -6,12 +6,10 @@ import utilities.MessageType;
 import utilities.User;
 
 import java.io.*;
-import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.util.Random;
 import java.util.Vector;
 
 /**
@@ -25,7 +23,6 @@ public class Client
 	private boolean keepGoing;
 	private int clientPort = 8000;
 	private Vector<Conversation> clientConversations;
-	private BigInteger sequenceNumber;
 	
 	//UDP
 	private DatagramSocket udpSocket;
@@ -59,8 +56,6 @@ public class Client
 		this.clientPort = clientPort;
 		this.user = user;
 		clientConversations = new Vector<Conversation>();
-		Random rand = new Random();
-		sequenceNumber = new BigInteger(14, rand);
 		
 	}//END CONSTRUCTOR Client(String, int, int, User)
 	
@@ -98,16 +93,17 @@ public class Client
 	{
 		Message message = new Message(MessageType.SEND, user, destination, textMessage);
 		//add the message to the conversation
-		for(int i = 0; i < clientConversations.size(); i++)
+		for (int i = 0; i < clientConversations.size(); i++)
 		{
-			if(clientConversations.get(i).getRecipient().getUsername().equals(user.getUsername()))
+			if (clientConversations.get(i).getRecipient().getUsername().equals(destination.getUsername()))
 			{
 				clientConversations.get(i).addMesage(message);
+				System.out.println("from sendMessage: sequence number: " + clientConversations.get(i).getSequenceNumber());
 				message.setSequenceNumber(clientConversations.get(i).getSequenceNumber());
+				this.sendMessage(message);
 			}
 		}
 		
-		this.sendMessage(message);
 		
 	}//END METHOD sendMessage(String, User)
 	
@@ -232,12 +228,51 @@ public class Client
 	public void whosConnected()
 	{
 		System.out.println(user.getUsername() + " > Who is connected: ");
-		for(Conversation conv: clientConversations)
+		
+		if(clientConversations.size() == 0)
 		{
-			System.out.println("\t\t'" + conv.getRecipient().getUsername()  + "'");
+			System.out.println("\t\tNo clients are connected");
+			return;
+		}
+		
+		for (Conversation conv : clientConversations)
+		{
+			System.out.println("\t\t'" + conv.getRecipient()
+				.getUsername() + "' : " + conv.getRecipientSequenceNumber());
 		}
 		
 	}//END METHOD whosConnected()
+	
+	public boolean isRecipient(String user)
+	{
+		for(Conversation conv : clientConversations)
+		{
+			if(conv.getRecipient().getUsername().equals(user))
+			{
+				return true;
+			}
+		}
+		
+		return false;
+	}//END METHOD isRecipient(String user)
+	
+	public Conversation getConversation(String user)
+	{
+		if(!this.isRecipient(user))
+		{
+			return null;
+		}
+		
+		for(int i = 0; i < clientConversations.size(); i++)
+		{
+			if(clientConversations.get(i).getRecipient().getUsername().equals(user))
+			{
+				return clientConversations.get(i);
+			}
+		}
+		
+		return null;
+	}
 	
 	private class ListenServer extends Thread
 	{
@@ -257,19 +292,28 @@ public class Client
 						//send ACK
 						
 						String message = (String) msg.getPayload();
-						System.out.println(msg.getSource().getUsername() + " > " + message);
+						System.out.println("\n" + msg.getSource().getUsername() + " > " + message);
+						System.out.println("\t\tSequence number: " + msg.getSequenceNumber());
 						
 						//add it to the conversation
-						for(int i = 0;i < clientConversations.size(); i++)
+						for (int i = 0; i < clientConversations.size(); i++)
 						{
-							if(clientConversations.get(i).getRecipient().getUsername().equals(msg.getSource().getUsername()))
+							if (clientConversations.get(i)
+								.getRecipient()
+								.getUsername()
+								.equals(msg.getSource().getUsername()))
 							{
 								clientConversations.get(i).addMesage(msg);
+								clientConversations.get(i).incrementRecipientSequenceNumber();
 							}
 						}
 						
 						//send ACK back to the sender.
-						Message ackMessage = new Message(MessageType.ACK, user, msg.getSource(), msg.getSequenceNumber());
+						System.out.println("\t\tSending ACK back : " + msg.getSequenceNumber());
+						Message ackMessage = new Message(MessageType.ACK,
+						                                 user,
+						                                 msg.getSource(),
+						                                 msg.getSequenceNumber());
 						sendMessage(ackMessage);
 						
 						break;
@@ -280,11 +324,15 @@ public class Client
 						//increment the sequence number for the conversation with the client.
 						System.out.println(
 							user.getUsername() + " > " + "ACK message received from " + msg.getSource().getUsername());
+						System.out.println("\t\tSequence num : " + msg.getPayload());
 						
 						//increment sequence number for the conversation with the client
-						for(int i = 0; i < clientConversations.size(); i++)
+						for (int i = 0; i < clientConversations.size(); i++)
 						{
-							if(clientConversations.get(i).getRecipient().getUsername().equals(msg.getSource().getUsername()))
+							if (clientConversations.get(i)
+								.getRecipient()
+								.getUsername()
+								.equals(msg.getSource().getUsername()))
 							{
 								clientConversations.get(i).incrementSequenceNumber();
 							}
@@ -299,13 +347,16 @@ public class Client
 					case DISCONNECT:
 					{
 						//remove them from the conversation vector.
-						for(int i = 0; i < clientConversations.size(); i++)
+						for (int i = 0; i < clientConversations.size(); i++)
 						{
 							//removed user:
-							User removedUser = (User)msg.getPayload();
+							User removedUser = (User) msg.getPayload();
 							
 							//search through each one. find the one that matches the received message
-							if(clientConversations.get(i).getRecipient().getUsername().equals(removedUser.getUsername()))
+							if (clientConversations.get(i)
+								.getRecipient()
+								.getUsername()
+								.equals(removedUser.getUsername()))
 							{
 								//remove them from conversation vector
 								clientConversations.remove(i);
@@ -323,28 +374,31 @@ public class Client
 						//if it's a new user
 						//  create a new conversation and add it to the conversation vector.
 						
+						System.out.println(user.getUsername() + " > MessageType: USERS received");
+						
 						//check if the client is already in conversation vector.
 						boolean newUser = true;
-						for(int i = 0; i < clientConversations.size(); i++)
+						for (int i = 0; i < clientConversations.size(); i++)
 						{
 							User tempUser = (User) msg.getPayload();
-							if(clientConversations.get(i).getRecipient().getUsername().equals(tempUser.getUsername()))
+							if (clientConversations.get(i).getRecipient().getUsername().equals(tempUser.getUsername()))
 							{
 								newUser = false;
-							    break;
+								break;
 							}
 						}
 						
 						//if new user
-						if(newUser)
+						if (newUser)
 						{
-							System.out.println(user.getUsername() + " > " + "client '" + msg.getSource().getUsername() + "' is now CONNECTED");
 							//add the new client to the conversation vector.
 							User         newClient       = (User) msg.getPayload();
 							Conversation newConversation = new Conversation(newClient);
-							newClient.setSequenceNumber(user.getSequenceNumber());
 							newConversation.setRecipientSequenceNumber(newClient.getSequenceNumber());
+							newConversation.setSequenceNumber(user.getSequenceNumber());
 							clientConversations.add(newConversation);
+							System.out.println(user.getUsername() + " > " + "client '" + newClient.getUsername() + "' is now CONNECTED");
+							System.out.println("\t\tsequence number: " + newClient.getSequenceNumber());
 						}
 						
 						break;
