@@ -43,6 +43,7 @@ public final class User implements Serializable
 		this.username = username;
 		Random rand = new Random();
 		sequenceNumber = new BigInteger(14, rand);
+		System.out.println(this.username + " > sequence numeber: " + sequenceNumber);
 	}
 
     /**
@@ -58,6 +59,7 @@ public final class User implements Serializable
         this.lastName = lastName;
 	    Random rand = new Random();
 	    sequenceNumber = new BigInteger(14, rand);
+	    System.out.println(this.username + " > sequence numeber: " + sequenceNumber);
     }
 
     //METHODS

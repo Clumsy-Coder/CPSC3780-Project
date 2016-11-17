@@ -97,5 +97,11 @@ public class Message implements Serializable
 	public void setSequenceNumber(BigInteger sequenceNumber)
 	{
 		this.sequenceNumber = sequenceNumber;
+		System.out.println("Message: sequence number : " + this.sequenceNumber );
+	}
+	
+	public void setMessageType(MessageType messageType)
+	{
+		this.messageType = messageType;
 	}
 }
