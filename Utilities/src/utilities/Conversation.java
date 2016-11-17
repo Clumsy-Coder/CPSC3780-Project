@@ -15,6 +15,7 @@ public class Conversation
 	{
 		this.recipient = recipient;
 		conversation = new Vector<Message>();
+		this.setRecipientSequenceNumber(recipient.getSequenceNumber());
 		
 	}
 	
@@ -27,6 +28,11 @@ public class Conversation
 	public void incrementSequenceNumber()
 	{
 		sequenceNumber = sequenceNumber.add(BigInteger.ONE);
+	}
+	
+	public void incrementRecipientSequenceNumber()
+	{
+		recipientSequenceNumber = recipientSequenceNumber.add(BigInteger.ONE);
 	}
 	
 	public BigInteger getSequenceNumber()
