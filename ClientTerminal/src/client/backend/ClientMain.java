@@ -1,5 +1,6 @@
 package client.backend;
 
+import utilities.Conversation;
 import utilities.User;
 
 import java.util.Scanner;
@@ -11,26 +12,22 @@ public class ClientMain
 {
 	public static void main(String[] args)
 	{
-		int    serverPort     = 5555;
-		String serverIP = "192.168.2.12";
+		int    serverPort        = 5555;
+		String serverIP          = "192.168.2.12";
 		String username;
-		String recipientUsername = "";
-		int clientPort = 8000;
+		int    clientPort        = 8000;
 		
 		Client client;
-		User user;
-		User recipient;
+		User   user;
 		
-		if(args.length == 5)
+		if (args.length == 4)
 		{
 			username = args[0];
 			serverIP = args[1];
 			serverPort = Integer.parseInt(args[2]);
-			recipientUsername = args[3];
-			clientPort = Integer.parseInt(args[4]);
+			clientPort = Integer.parseInt(args[3]);
 			
 			user = new User(username);
-			recipient = new User(recipientUsername);
 			client = new Client(serverIP, serverPort, clientPort, user);
 			
 		}
@@ -41,21 +38,32 @@ public class ClientMain
 			System.out.println("Username serverIP serverPort recipientUsername clientPort");
 			return;
 		}
-
+		
 		if (!client.connect())
 		{
 			return;
 		}
-
-		Scanner scan      = new Scanner(System.in);
-		boolean keepGoing = true;
+		
+		Scanner      scan      = new Scanner(System.in);
+		boolean      keepGoing = true;
+		Conversation curConv   = null;
 		while (keepGoing)
 		{
-			if(!keepGoing)
+			if (!keepGoing)
 			{
 				break;
 			}
-			System.out.print(username + "> ");
+			
+			
+			if (curConv != null)
+			{
+				System.out.print(user.getUsername() + " : " + curConv.getRecipient().getUsername() + " > ");
+			}
+			else
+			{
+				System.out.print(username + "> ");
+			}
+			
 			String line = scan.nextLine();
 			//if logout was typed
 			if (line.equalsIgnoreCase("LOGOUT"))
@@ -64,19 +72,37 @@ public class ClientMain
 				keepGoing = false;
 				System.out.println("Logged off");
 //				client.disconnect();
-
+				
 			}
-			else if(line.equals("WHOISIN"))
+			else if (line.equalsIgnoreCase("WHOISIN"))
 			{
 				client.whosConnected();
 			}
 			else
 			{
-				client.sendMessage(line, recipient);
+				//check if the input is the username of the client.
+				if (client.isRecipient(line))
+				{
+					curConv = client.getConversation(line);
+					continue;
+				}
+				
+				else
+				{
+					if (curConv == null)
+					{
+						System.out.println(user.getUsername() + " > Please define the recipient. Type whoisin");
+					}
+					else
+					{
+						client.sendMessage(line, curConv.getRecipient());
+						
+					}
+				}
 				
 			}
 		}
 		client.disconnect();
-
+		
 	}
 }
