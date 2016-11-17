@@ -16,7 +16,7 @@ public class ClientMain
 		String serverIP          = "192.168.2.12";
 		String username;
 		int    clientPort        = 8000;
-		
+		String recipient = "";
 		Client client;
 		User   user;
 		
@@ -84,11 +84,13 @@ public class ClientMain
 				if (client.isRecipient(line))
 				{
 					curConv = client.getConversation(line);
+					recipient = line;
 					continue;
 				}
 				
 				else
 				{
+					curConv = client.getConversation(recipient);
 					if (curConv == null)
 					{
 						System.out.println(user.getUsername() + " > Please define the recipient. Type whoisin");
