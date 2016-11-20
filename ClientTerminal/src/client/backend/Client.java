@@ -181,7 +181,7 @@ public class Client
 			if (clientConversations.get(i).getRecipient().getUsername().equals(destination.getUsername()))
 			{
 				message.setSequenceNumber(clientConversations.get(i).getSequenceNumber());
-				clientConversations.get(i).addMesage(message);
+				clientConversations.get(i).addMessage(message);
 				this.sendMessage(message);
 			}//END IF for checking the message destination username matches the username in the conversation
 			
@@ -487,7 +487,7 @@ public class Client
 				.getUsername()
 				.equals(msg.getSource().getUsername()))
 			{
-				clientConversations.get(i).addMesage(msg);
+				clientConversations.get(i).addMessage(msg);
 				clientConversations.get(i).incrementRecipientSequenceNumber();
 			}//END if (clientConversations.get(i)
 			 //        .getRecipient()
