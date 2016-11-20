@@ -605,10 +605,7 @@ public class Client
 		if (newUser)
 		{
 			User         newClient       = (User) msg.getPayload();
-			Conversation newConversation = new Conversation(newClient);
-			
-			newConversation.setRecipientSequenceNumber(newClient.getSequenceNumber());
-			newConversation.setSequenceNumber(user.getSequenceNumber());
+			Conversation newConversation = new Conversation(newClient, user.getSequenceNumber(), newClient.getSequenceNumber());
 			clientConversations.add(newConversation);
 			
 			System.out.println("\n" + user.getUsername() + " > " + "client '" + newClient.getUsername() + "' is now CONNECTED");
