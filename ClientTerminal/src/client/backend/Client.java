@@ -1,5 +1,7 @@
 package client.backend;
 
+import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
 import utilities.Conversation;
 import utilities.Message;
 import utilities.MessageType;
@@ -14,40 +16,65 @@ import java.util.Vector;
 
 /**
  * Class used to communicate with the server
+ * Client can: <br>
+ *     Connect the server<br>
+ *     Disconnect from the server<br>
+ *     Send messages<br>
+ *     Receive messages<br>
+ *
  */
 public class Client
 {
+	/** server IP address */
 	private static String serverIP;
-	private static User   user;
+	/** server port number. Default is 5555 */
 	private int serverPort = 5555;
+	/** Contains user information of who's using the chat. */
+	private static User   user;
+	/** flag indicating when to start and stop the chat */
 	private boolean keepGoing;
+	/** client port number. So the server know what port number to send to. Default is 8000 */
 	private int clientPort = 8000;
+	/** List of conversations connected to the server */
 	private Vector<Conversation> clientConversations;
+	/** Interval time for sending GET request messages in millisecond */
+	private long getRequestInterval = 1000;
 	
 	//UDP
+	/** UDP socket */
 	private DatagramSocket udpSocket;
+	/** Size of incoming packets in bytes */
 	private final int MAX_INCOMING_SIZE = 1024;
+	/** Inner class for listening to the server */
 	private ListenServer    serverListen;
+	/** Inner class for sending GET request messages to the server */
 	private SendGET_request getRequestThread;
 	
 	
-	Client(String serverIP, User user)
-	{
-		this(serverIP, 5555, user);
-		
-	}//END DEFAULT CONSTRUCTOR Client(String, User)
+//	Client(String serverIP, User user)
+//	{
+//		this(serverIP, 5555, user);
+//
+//	}//END DEFAULT CONSTRUCTOR Client(String, User)
 	
-	Client(String serverIP, int serverPort, User user)
-	{
-		this.serverIP = serverIP;
-		this.serverPort = serverPort;
-		this.user = user;
-		keepGoing = true;
-		clientConversations = new Vector<Conversation>();
-		
-	}//END CONSTRUCTOR Client(String, int, User)
+//	Client(String serverIP, int serverPort, User user)
+//	{
+//		this.serverIP = serverIP;
+//		this.serverPort = serverPort;
+//		this.user = user;
+//		keepGoing = true;
+//		clientConversations = new Vector<Conversation>();
+//
+//	}//END CONSTRUCTOR Client(String, int, User)
 	
-	Client(String serverIP, int serverPort, int clientPort, User user)
+	/**
+	 * Constructor used to initialize the object.
+	 * @param serverIP IP address of the server
+	 * @param serverPort server port number
+	 * @param clientPort port number of the client
+	 * @param user Contains username, firstname, lastname and sequence number.
+	 */
+	Client(@NotNull String serverIP, @NotNull int serverPort, @NotNull int clientPort, @NotNull User user)
 	{
 		this.serverIP = serverIP;
 		this.serverPort = serverPort;
@@ -57,37 +84,83 @@ public class Client
 		
 	}//END CONSTRUCTOR Client(String, int, int, User)
 	
+	/**
+	 * Returns the server IP address
+	 * @return server IP address
+	 */
 	public final String getServerIP()
 	{
 		return serverIP;
 		
 	}//END METHOD getServerIP()
 	
-	protected final void setServerIP(String serverIP)
+	/**
+	 * Sets the server IP address. In case the server shuts down, the client can contact the next server
+	 * to the next server
+	 * @param serverIP server IP address
+	 */
+	protected final void setServerIP(@NotNull String serverIP)
 	{
 		this.serverIP = serverIP;
 		
 	}//END METHOD setServerIP
 	
+	/**
+	 * Returns the User object for this client.
+	 * @return User object
+	 */
 	public final User getUser()
 	{
 		return user;
 		
 	}//END METHOD getUser()
 	
+	/**
+	 * Returns the server port number
+	 * @return Server port number
+	 */
 	public final int getServerPort()
 	{
 		return serverPort;
 		
 	}//END METHOD getServerPort()
 	
-	protected final void setServerPort(int serverPort)
+	/**
+	 * Set the server port number. In case the server shuts down, the client can contact the next server.
+	 * @param serverPort
+	 */
+	protected final void setServerPort(@NotNull int serverPort)
 	{
 		this.serverPort = serverPort;
 		
 	}//END METHOD setServerPort(int)
 	
-	protected final void sendMessage(String textMessage, User destination)
+	/**
+	 * Returns the GET request interval in milliseconds.
+	 * @return
+	 */
+	public long getGetRequestInterval()
+	{
+		return getRequestInterval;
+		
+	}//END METHOD getGetRequestInterval()
+	
+	/**
+	 * Set the GET request interval
+	 * @param getRequestInterval Interval time in milliseconds
+	 */
+	public void setGetRequestInterval(@NotNull long getRequestInterval)
+	{
+		this.getRequestInterval = getRequestInterval;
+		
+	}//END METHOD setGetRequestInterval(long)
+	
+	/**
+	 * Sends a message to the server. Used from the terminal
+	 * @param textMessage The text to be sent
+	 * @param destination The destination User
+	 */
+	protected final void sendMessage(@NotNull String textMessage, @NotNull User destination)
 	{
 		//Make a Message object
 		//      MessageType: SEND
@@ -116,7 +189,11 @@ public class Client
 		
 	}//END METHOD sendMessage(String, User)
 	
-	private final void sendMessage(Message message)
+	/**
+	 * Converts the Message object and sends the message as a Packet to the server.
+	 * @param message Message being sent.
+	 */
+	private final void sendMessage(@NotNull Message message)
 	{
 		//setup ByteArrayOutputStream : for converting object output stream into byte array
 		//setup ObjectOutputStream : for writing the object (in this case the Message object) into the stream
@@ -158,6 +235,10 @@ public class Client
 		
 	}//END METHOD sendMessage(Message)
 	
+	/**
+	 * Connects to the server.<br>
+	 * @return true if message was sent successfully. false otherwise.
+	 */
 	public final boolean connect()
 	{
 		//Make a message object
@@ -204,13 +285,11 @@ public class Client
 		
 	}//END METHOD connect()
 	
+	/**
+	 * Disconnects from the server
+	 */
 	public final void disconnect()
 	{
-		//send a message to the server that you are disconnecting.
-		//disconnect the server.
-		//make sure the output and input streams are closed.
-		//server will remove current user from the database as connected user
-		
 		//Make a Message object
 		//      MessageType: DISCONNECT
 		//      source: user
@@ -237,7 +316,11 @@ public class Client
 		
 	}//END METHOD disconnect()
 	
-	private final Message readMessage()
+	/**
+	 * Read incoming UDP packets
+	 * @return Return the message received.
+	 */
+	private final @Nullable Message readMessage()
 	{
 		//NOTE: the procedure for extracting the Message object from UDP packet was obtained online.
 		//  I'm just following along.
@@ -285,6 +368,9 @@ public class Client
 		
 	}//END METHOD readMessage()
 	
+	/**
+	 * Displays who's connected to the server.
+	 */
 	public final void whosConnected()
 	{
 		//check if they're any clients connected.
@@ -312,7 +398,12 @@ public class Client
 		
 	}//END METHOD whosConnected()
 	
-	public final boolean isRecipient(String user)
+	/**
+	 * Checks if the parameter is a client is in the conversation list.
+	 * @param user The username to check
+	 * @return true if the client is in the conversation list. false otherwise.
+	 */
+	public final boolean isRecipient(@NotNull String user)
 	{
 		//iterate through the conversation list
 		//      check if current conversation username matches the parameter
@@ -333,7 +424,12 @@ public class Client
 		
 	}//END METHOD isRecipient(String user)
 	
-	public final Conversation getConversation(String user)
+	/**
+	 * Returns the conversation of the given user.
+	 * @param user The username of the conversation
+	 * @return Conversation if the client exists in conversation list. Null otherwise.
+	 */
+	public final @Nullable Conversation getConversation(@NotNull String user)
 	{
 		//check if the parameter given is a client
 		//  if false : return null
@@ -362,7 +458,11 @@ public class Client
 		
 	}//END METHOD getConversation(String)
 	
-	private final synchronized void handleGET_message(Message msg)
+	/**
+	 * Handles GET messages
+	 * @param msg Message to handle
+	 */
+	private final synchronized void handleGET_message(@NotNull Message msg)
 	{
 		//print the message
 		//iterate through the conversation list
@@ -405,7 +505,11 @@ public class Client
 		
 	}//END METHOD handleGET_message(Message)
 	
-	private final synchronized void handleACK_message(Message msg)
+	/**
+	 * Handles ACK messages
+	 * @param msg Message to handle
+	 */
+	private final synchronized void handleACK_message(@NotNull Message msg)
 	{
 		//iterate through the conversation list
 		//      check if the source of the message matches the conversation
@@ -428,7 +532,11 @@ public class Client
 		
 	}//END METHOD handleACK_message(Message)
 	
-	private final synchronized void handleDISCONNECT_message(Message msg)
+	/**
+	 * Handles DISCONNECT messages
+	 * @param msg Message to handle
+	 */
+	private final synchronized void handleDISCONNECT_message(@NotNull Message msg)
 	{
 		//store the payload into a User object
 		//iterate through the conversation list
@@ -459,7 +567,11 @@ public class Client
 		
 	}//END METHOD handleDISCONNECT_message(Message)
 	
-	private final synchronized void handleUSERS_message(Message msg)
+	/**
+	 * Handles USERS messages
+	 * @param msg Message to handle
+	 */
+	private final synchronized void handleUSERS_message(@NotNull Message msg)
 	{
 		//create boolean variable. Used as a flag indicating the client already exists. Set it to true
 		//iterate through the conversation list
@@ -505,6 +617,9 @@ public class Client
 		
 	}//END METHOD handleUSERS_message(Message)
 	
+	/**
+	 * Inner class used for listening to the server on a different thread.
+	 */
 	private class ListenServer extends Thread
 	{
 		//while the flag keepGoing is true
@@ -516,6 +631,10 @@ public class Client
 		//          USERS: handle USERS message
 		//          default: print error message
 		
+		/**
+		 * Listen to the server as long the client is connected to the server.<br>
+		 * Handle any incoming messages.
+		 */
 		public void run()
 		{
 			while (keepGoing)
@@ -569,6 +688,9 @@ public class Client
 		
 	}//END INNER CLASS ListenServer
 	
+	/**
+	 * Inner class used for sending GET requests every interval (in milliseconds)
+	 */
 	private class SendGET_request extends Thread
 	{
 		//while the flag keepGoing is true
@@ -579,9 +701,12 @@ public class Client
 		//          source: user
 		//          destination: server
 		//          payload: null
-		//      pause the thread for GET_REQUEST_INTERVAL milliseconds
+		//      pause the thread for getRequestInterval milliseconds
 		//      send the message
 		
+		/**
+		 * Sends GET messages to the server as long the client is connected to the server.
+		 */
 		public void run()
 		{
 			while (keepGoing)
@@ -595,7 +720,7 @@ public class Client
 				Message message = new Message(MessageType.GET, user, null, null);
 				try
 				{
-					Thread.sleep(2000);
+					Thread.sleep(getRequestInterval);
 					sendMessage(message);
 					
 				}//END TRY BLOCK
