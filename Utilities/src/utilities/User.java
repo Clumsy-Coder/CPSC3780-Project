@@ -1,6 +1,8 @@
-package client.backend;
+package utilities;
 
 import java.io.Serializable;
+import java.math.BigInteger;
+import java.util.Random;
 
 /**
  * Class used for identifying the user.<br>
@@ -26,6 +28,8 @@ public final class User implements Serializable
      * Last name of the user
      */
     private String  lastName;
+    
+    private BigInteger sequenceNumber;
 
     /**
      * In order to be able to send object through a network
@@ -33,6 +37,14 @@ public final class User implements Serializable
     private static final long serialVersionUID = -3529564406812045479L;
 
     //CONSTRUCTORS
+
+	public User(String username)
+	{
+		this.username = username;
+		Random rand = new Random();
+		sequenceNumber = new BigInteger(14, rand);
+		System.out.println(this.username + " > sequence numeber: " + sequenceNumber);
+	}
 
     /**
      * Default constructor
@@ -45,6 +57,9 @@ public final class User implements Serializable
         this.username = username;
         this.firstName = firstName;
         this.lastName = lastName;
+	    Random rand = new Random();
+	    sequenceNumber = new BigInteger(14, rand);
+	    System.out.println(this.username + " > sequence numeber: " + sequenceNumber);
     }
 
     //METHODS
@@ -75,4 +90,14 @@ public final class User implements Serializable
     {
         return lastName;
     }
+	
+	public BigInteger getSequenceNumber()
+	{
+		return sequenceNumber;
+	}
+	
+	public void setSequenceNumber(BigInteger sequenceNumber)
+	{
+		this.sequenceNumber = sequenceNumber;
+	}
 }

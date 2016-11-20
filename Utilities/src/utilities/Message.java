@@ -1,4 +1,4 @@
-package client.backend;
+package utilities;
 
 import java.io.Serializable;
 import java.math.BigInteger;
@@ -15,12 +15,11 @@ public class Message implements Serializable
 	/**
 	 *
 	 */
-	private BigInteger sequenceNumber;
-	private Type       messageType;
-	private User       user;
-	private User       source;
-	private User       destination;
-	private Object     payload;        //NULL allowed. either send a String message, or user info
+	private BigInteger  sequenceNumber;
+	private MessageType messageType;
+	private User        source;
+	private User        destination;
+	private Object      payload;        //NULL allowed. either send a String message, or user info
 	/**
 	 * In order to be able to send object through a network
 	 */
@@ -31,15 +30,13 @@ public class Message implements Serializable
 	/**
 	 * Default constructor used for creating a message
 	 *
-	 * @param user        The sender's information
 	 * @param messageType The type of message, SEND, GET, ACK, USER
 	 * @param source      The source IP address
 	 * @param destination The destination IP address
 	 * @param payload     The message.
 	 */
-	public Message(User user, Type messageType, User source, User destination, Object payload)
+	public Message(MessageType messageType, User source, User destination, Object payload)
 	{
-		this.user           = user;
 		this.messageType    = messageType;
 		this.source         = source;
 		this.destination    = destination;
@@ -53,19 +50,9 @@ public class Message implements Serializable
 	 *
 	 * @return
 	 */
-	public Type getMessageType()
+	public MessageType getMessageType()
 	{
 		return messageType;
-	}
-
-	/**
-	 * Returns the user information of the sender
-	 *
-	 * @return
-	 */
-	public User getUser()
-	{
-		return user;
 	}
 
 	/**
@@ -96,5 +83,26 @@ public class Message implements Serializable
 	public Object getPayload()
 	{
 		return payload;
+	}
+
+	/**
+	 * Returns the sequence number
+	 * @return
+	 */
+	public BigInteger getSequenceNumber()
+	{
+		return sequenceNumber;
+	}
+	
+	public void setSequenceNumber(BigInteger sequenceNumber)
+	{
+		this.sequenceNumber = sequenceNumber;
+//		System.out.println("Message: sequence number : " + this.sequenceNumber );
+		
+	}
+	
+	public void setMessageType(MessageType messageType)
+	{
+		this.messageType = messageType;
 	}
 }
