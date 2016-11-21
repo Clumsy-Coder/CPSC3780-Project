@@ -21,7 +21,7 @@ public class Message implements Serializable
 	 */
 	private BigInteger  sequenceNumber;
 	/**
-	 * The type of message being sent or recieved
+	 * The type of message being sent or received
 	 */
 	private MessageType messageType;
 	/**
@@ -46,7 +46,7 @@ public class Message implements Serializable
 	/**
 	 * Default constructor used for creating a message
 	 *
-	 * @param messageType The type of message, SEND, GET, ACK, USER
+	 * @param messageType The type of message
 	 * @param source      The source IP address
 	 * @param destination The destination IP address
 	 * @param payload     The message.
@@ -119,6 +119,10 @@ public class Message implements Serializable
 		
 	}//END METHOD getSequenceNumber()
 	
+	/**
+	 * Set the sequence number for the message
+	 * @param sequenceNumber Sequence number
+	 */
 	public void setSequenceNumber(@NotNull BigInteger sequenceNumber)
 	{
 		this.sequenceNumber = sequenceNumber;
