@@ -1,5 +1,8 @@
 package utilities;
 
+import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
+
 import java.io.Serializable;
 import java.math.BigInteger;
 
@@ -13,12 +16,25 @@ public class Message implements Serializable
 {
 	//ATTRIBUTES
 	/**
-	 *
+	 * Contains the sequence number of the message. <b>CANNOT</b> be null when two clients are sending a message to each other.<br>
+	 * Can be null when Client connects to the server, or when server is sending clients info about connected clients.
 	 */
 	private BigInteger  sequenceNumber;
+	/**
+	 * The type of message being sent or recieved
+	 */
 	private MessageType messageType;
+	/**
+	 * Who is sending the message
+	 */
 	private User        source;
+	/**
+	 * Who is receiving the message
+	 */
 	private User        destination;
+	/**
+	 * Contains text message being sent by the client or when the Server is sending info about the connected clients.
+	 */
 	private Object      payload;        //NULL allowed. either send a String message, or user info
 	/**
 	 * In order to be able to send object through a network
@@ -35,13 +51,17 @@ public class Message implements Serializable
 	 * @param destination The destination IP address
 	 * @param payload     The message.
 	 */
-	public Message(MessageType messageType, User source, User destination, Object payload)
+	public Message(@NotNull MessageType messageType,
+	               @NotNull User source,
+	               @Nullable User destination,
+	               @NotNull Object payload)
 	{
 		this.messageType    = messageType;
 		this.source         = source;
 		this.destination    = destination;
 		this.payload        = payload;
-	}
+		
+	}//END CONSTRUCTOR Message(MessageType, User, User, Object)
 
 	//METHODS
 
@@ -50,59 +70,69 @@ public class Message implements Serializable
 	 *
 	 * @return
 	 */
-	public MessageType getMessageType()
+	public @NotNull MessageType getMessageType()
 	{
 		return messageType;
-	}
+		
+	}//END METHOD getMessageType()
 
 	/**
-	 * Returns the IP address of the sender
+	 * Returns the User who is sending the Message
 	 *
-	 * @return
+	 * @return User object
 	 */
-	public User getSource()
+	public @NotNull User getSource()
 	{
 		return source;
-	}
+		
+	}//END METHOD getSource()
 
 	/**
-	 * Returns the IP address of the destination
+	 * Returns the User who is receiving the Message
 	 *
 	 * @return
 	 */
-	public User getDestination()
+	public @Nullable User getDestination()
 	{
 		return destination;
-	}
+		
+	}//END METHOD getDestination()
 
 	/**
-	 * Returns the message
+	 * Returns the message payload
 	 *
-	 * @return
+	 * @return Message payload.
 	 */
 	public Object getPayload()
 	{
 		return payload;
-	}
+		
+	}//END METHOD getPayload()
 
 	/**
 	 * Returns the sequence number
 	 * @return
 	 */
-	public BigInteger getSequenceNumber()
+	public @Nullable BigInteger getSequenceNumber()
 	{
 		return sequenceNumber;
-	}
+		
+	}//END METHOD getSequenceNumber()
 	
-	public void setSequenceNumber(BigInteger sequenceNumber)
+	public void setSequenceNumber(@NotNull BigInteger sequenceNumber)
 	{
 		this.sequenceNumber = sequenceNumber;
-//		System.out.println("Message: sequence number : " + this.sequenceNumber );
 		
-	}
+	}//END METHOD setSequenceNumber(BigInteger)
 	
-	public void setMessageType(MessageType messageType)
+	/**
+	 * Sets the MessageType
+	 * @param messageType Message type
+	 */
+	public void setMessageType(@NotNull MessageType messageType)
 	{
 		this.messageType = messageType;
-	}
-}
+		
+	}//END METHOD setMessageType(MessageType)
+	
+}//END CLASS Message
