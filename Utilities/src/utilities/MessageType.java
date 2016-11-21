@@ -38,4 +38,5 @@ public enum MessageType
 	 * When a server is disconnecting
 	 */
 	SERVER_DISCONNECT
-}
+	
+}//END ENUM MessageType
