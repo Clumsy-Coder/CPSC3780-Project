@@ -1,5 +1,6 @@
 package server.backend;
 
+import com.sun.istack.internal.NotNull;
 import utilities.Message;
 import utilities.MessageType;
 import utilities.User;
@@ -11,19 +12,59 @@ import java.net.*;
 import java.util.Vector;
 
 
+/**
+ * Class used for serving as the middle man for sending and receiving messages.
+ */
 public class Server
 {
+	/**
+	 * Server port number. Default is 5555
+	 */
 	private int serverPort = 5555;
+	/**
+	 * Flag indicating whether the server keeps running or stops
+	 */
 	private boolean         keepGoing;
+	/**
+	 * Contains all the messages received with SEND message type.
+	 * Removes elements when client sends a GET request and adds
+	 * it to the secondary message buffer GET_messageBuffer
+	 */
 	private Vector<Message> messageBuffer;
+	/**
+	 * Indicating the server as a user.
+	 */
 	private User            serverUser;
+	/**
+	 * What port is the client is using. This changes everytime a message is received.
+	 */
 	private int             clientPort;
 	
 	//UDP
+	/**
+	 * UDP socket for the server
+	 */
 	private DatagramSocket udpSocket;
+	/**
+	 * Max packet size receivable. 1024 bytes is the default
+	 */
 	private final int MAX_INCOMING_SIZE = 1024;
+	/**
+	 * Contains all the clients connected to the server
+	 */
 	private Vector<UserNetworkInfo> connectedUsersHashT;
-	private Vector<Message>         GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is recieved for each message
+	/**
+	 * Secondary message buffer that contains messages from
+	 * the first message buffer, only when the client sends
+	 * a GET request. The secondary buffer is used for
+	 * checking if the message is acknowledged. Remove the
+	 * element when the ACK for the message is received.
+	 */
+	private Vector<Message>         GET_MessageBuffer; //for when a client sent a GET request. remove elements once ACK is received for each message
+	/**
+	 * Contains the IP address for the message received from the client.
+	 * Changes everytime a message is received.
+	 */
 	private InetAddress             clientIPaddress;
 	
 	/**
@@ -50,6 +91,9 @@ public class Server
 		
 	}//END CONSTRUCTOR Server(String, serverPort)
 	
+	/**
+	 * Starts the server and listens for incoming messages.
+	 */
 	public void startServer()
 	{
 		try
@@ -87,33 +131,47 @@ public class Server
 		
 	}//END METHOD startServer()
 	
+	/**
+	 * Stops the server and stops listening for incoming messages.
+	 */
 	public void stopServer()
 	{
 		keepGoing = false;
 		
 	}//END METHOD stopServer()
 	
-	//TODO implement the broadcastUserList method to send every user their updated userList
-	private synchronized void broadcastUserList(Message message)
+	/**
+	 * Used for sending user info to all connected clients.
+	 * @param message Message to send.
+	 */
+	private synchronized void broadcastUserList(@NotNull Message message)
 	{
-//		Vector<NetworkInfo> broadCastVector = new Vector<>(connectedUsersHashT.values());
-//		Iterator<UserNetworkInfo> it = connectedUsersHashT.iterator();
-		//send the message to all clients connected to the server.
-//		while (it.hasNext())
+		//iterate through the loop
+		//  make a message
+		//      MessageType: message type
+		//      source: server
+		//      destination: user
+		//      payload: message payload.
+		//  send message
+		
 		for (UserNetworkInfo curClient : connectedUsersHashT)
 		{
-//			Map.Entry<String, UserNetworkInfo> pair = (Map.Entry) it.next();
 			Message broadcastMessage = new Message(message.getMessageType(),
 			                                       serverUser,
 			                                       curClient.getUser(),
 			                                       message.getPayload());
 			this.sendMessage(broadcastMessage);
-//			it.remove();
 			
-		}
-	}
+		}//END for (UserNetworkInfo curClient : connectedUsersHashT)
+		
+	}//END METHOD broadcastUserList(Message)
 	
-	private synchronized UserNetworkInfo getClient(User user)
+	/**
+	 * Returns the user network info of the specified user.
+	 * @param user The user being searched for
+	 * @return UserNetworkInfo if found. null otherwise.
+	 */
+	private synchronized UserNetworkInfo getClient(@NotNull User user)
 	{
 		UserNetworkInfo connectedClient = null;
 		
@@ -127,9 +185,13 @@ public class Server
 		}
 		
 		return connectedClient;
-	}
+	}//END METHOD getClient(User)
 	
-	private synchronized void removeClient(User user)
+	/**
+	 * Used for removing a client from the list of connected users
+	 * @param user Client to remove
+	 */
+	private synchronized void removeClient(@NotNull User user)
 	{
 		for (int i = 0; i < connectedUsersHashT.size(); i++)
 		{
@@ -139,10 +201,13 @@ public class Server
 				return;
 			}
 		}
-	}
+	}//END METHOD removeClient(User)
 	
-	//	private synchronized void sendMessage(MessageType messageType, User source, User destination, Object payload)
-	private synchronized void sendMessage(Message sendMessage)
+	/**
+	 * Used for sending a message to a client.
+	 * @param sendMessage The message to be sent.
+	 */
+	private synchronized void sendMessage(@NotNull Message sendMessage)
 	{
 //		Message message = new Message(messageType, source, destination, payload);
 		
@@ -181,6 +246,11 @@ public class Server
 		
 	}//END METHOD sendMessage(MessageType, User, User, Object)
 	
+	/**
+	 * Used for reading incoming messages.
+	 * The method will hold until a packet is recieved.
+	 * @return The message that was read.
+	 */
 	private Message readMessage()
 	{
 		Message message = null;
@@ -212,7 +282,11 @@ public class Server
 		
 	}//END METHOD readMessage()
 	
-	private final synchronized void handleSEND_message(Message message)
+	/**
+	 * Handles messages that have SEND message type
+	 * @param message Message to handle
+	 */
+	private final synchronized void handleSEND_message(@NotNull Message message)
 	{
 		//get the message and store it in messageBuffer
 		//message format received:
@@ -221,6 +295,7 @@ public class Server
 		//  destination: destination (the receiver)
 		//  payload: text message
 		//  NOTE: sequence number must be embedded.
+		
 		System.out.println("------------------------------------------------------------");
 		messageBuffer.add(message);
 		System.out.println(serverUser.getUsername() + " > Message from: '" + message.getSource()
@@ -232,7 +307,11 @@ public class Server
 		
 	}//END METHOD handleSEND_message(Message)
 	
-	private final synchronized void handleGET_message(Message message)
+	/**
+	 * Handles messages that have GET message type
+	 * @param message Message to handle
+	 */
+	private final synchronized void handleGET_message(@NotNull Message message)
 	{
 		//message format received:
 		//  Type: GET
@@ -306,7 +385,11 @@ public class Server
 		
 	}//END METHOD handleGET_message(Message)
 	
-	private final synchronized void handleACK_message(Message message)
+	/**
+	 * Handles messages that have ACK message type
+	 * @param message Message to handle
+	 */
+	private final synchronized void handleACK_message(@NotNull Message message)
 	{
 		//message format received
 		//  Type: ACK
@@ -358,7 +441,11 @@ public class Server
 		
 	}//END METHOD handleACK_message(Message)
 	
-	private final synchronized void handleUSERS_message(Message message)
+	/**
+	 * Handles messages that have USERS message type
+	 * @param message Message to handle
+	 */
+	private final synchronized void handleUSERS_message(@NotNull Message message)
 	{
 		System.out.println("------------------------------------------------------------");
 		//let everyone know who just connected to the server.
@@ -379,9 +466,13 @@ public class Server
 		
 	}//END METHOD handleUSERS_message(Message)
 	
+	/**
+	 * Handles messages that have CONNECT message type
+	 * @param message Message to handle
+	 */
 	private final synchronized void handleCONNECT_message(Message message)
 	{
-		//message format recieved
+		//message format received
 		//  Type: CONNECT
 		//  source: source (the one who is connecting)
 		//  destination: server
@@ -481,6 +572,10 @@ public class Server
 		
 	}//END METHOD handleCONNECT_message(Message)
 	
+	/**
+	 * Handles messages that have DISCONNECT message type
+	 * @param message Message to handle
+	 */
 	private final synchronized void handleDISCONNECT_message(Message message)
 	{
 		//message format received
@@ -516,6 +611,11 @@ public class Server
 		
 	}//END METHOD handleDISCONNECT_message(Message)
 	
+	/**
+	 * Receives the message and calls the appropiate method to
+	 * handle the message
+	 * @param message Message received.
+	 */
 	private synchronized void handleMessage(Message message)
 	{
 		//handle the message based on the type.
