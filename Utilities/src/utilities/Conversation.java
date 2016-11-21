@@ -3,7 +3,6 @@ package utilities;
 import com.sun.istack.internal.NotNull;
 
 import java.math.BigInteger;
-import java.util.Random;
 import java.util.Vector;
 
 /**
@@ -94,16 +93,6 @@ public class Conversation
 		
 	}//END METHOD getRecipientSequenceNumber()
 	
-//	/**
-//	 * Set <b>recipient's</b> sequence number
-//	 * @param recipientSequenceNumber sequence number
-//	 */
-//	public void setRecipientSequenceNumber(@NotNull BigInteger recipientSequenceNumber)
-//	{
-//		this.recipientSequenceNumber = recipientSequenceNumber;
-//
-//	}//END METHOD setRecipientSequenceNumber(BigInteger)
-	
 	/**
 	 * Return the recipient.
 	 * @return User object
@@ -123,15 +112,5 @@ public class Conversation
 		return conversation;
 		
 	}//END METHOD getConversation()
-	
-//	/**
-//	 * Set <b>clients's</b> sequence number.
-//	 * @param sequenceNumber
-//	 */
-//	public void setSequenceNumber(@NotNull BigInteger sequenceNumber)
-//	{
-//		this.sequenceNumber = sequenceNumber;
-//
-//	}//END METHOD setSequenceNumber(BigInteger)
 	
 }//END CLASS Conversation

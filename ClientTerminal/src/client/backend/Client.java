@@ -50,23 +50,6 @@ public class Client
 	/** Inner class for sending GET request messages to the server */
 	private SendGET_request getRequestThread;
 	
-	
-//	Client(String serverIP, User user)
-//	{
-//		this(serverIP, 5555, user);
-//
-//	}//END DEFAULT CONSTRUCTOR Client(String, User)
-	
-//	Client(String serverIP, int serverPort, User user)
-//	{
-//		this.serverIP = serverIP;
-//		this.serverPort = serverPort;
-//		this.user = user;
-//		keepGoing = true;
-//		clientConversations = new Vector<Conversation>();
-//
-//	}//END CONSTRUCTOR Client(String, int, User)
-	
 	/**
 	 * Constructor used to initialize the object.
 	 * @param serverIP IP address of the server
