@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/CPSC3780-Project.iml" filepath="$PROJECT_DIR$/CPSC3780-Project.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ClientGUI/ClientGUI.iml" filepath="$PROJECT_DIR$/ClientGUI/ClientGUI.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ClientTerminal/ClientTerminal.iml" filepath="$PROJECT_DIR$/ClientTerminal/ClientTerminal.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ServerGUI/ServerGUI.iml" filepath="$PROJECT_DIR$/ServerGUI/ServerGUI.iml" />
+      <module fileurl="file://$PROJECT_DIR$/ServerTerminal/ServerTerminal.iml" filepath="$PROJECT_DIR$/ServerTerminal/ServerTerminal.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Utilities/Utilities.iml" filepath="$PROJECT_DIR$/Utilities/Utilities.iml" />
+    </modules>
+  </component>
+</project>
