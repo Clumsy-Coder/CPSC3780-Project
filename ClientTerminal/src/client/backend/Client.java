@@ -110,7 +110,7 @@ public class Client
 	
 	/**
 	 * Set the server port number. In case the server shuts down, the client can contact the next server.
-	 * @param serverPort
+	 * @param serverPort Port number to be set
 	 */
 	protected final void setServerPort(@NotNull int serverPort)
 	{
@@ -120,7 +120,7 @@ public class Client
 	
 	/**
 	 * Returns the GET request interval in milliseconds.
-	 * @return
+	 * @return Interval for GET request in milliseconds
 	 */
 	public long getGetRequestInterval()
 	{

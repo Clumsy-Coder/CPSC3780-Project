@@ -43,7 +43,7 @@ public final class User implements Serializable
 	
 	/**
 	 * Constructor that initializes attributes, and randomly generates sequence number.
-	 * @param username
+	 * @param username The username of the user
 	 */
 	public User(@NotNull String username)
 	{
@@ -75,7 +75,7 @@ public final class User implements Serializable
 
     /**
      * Return the username
-     * @return
+     * @return Username of the user
      */
     public final @NotNull String getUsername()
     {
@@ -85,7 +85,7 @@ public final class User implements Serializable
 
     /**
      * Return firstname of the client
-     * @return
+     * @return Firstname of the user
      */
     public final @NotNull String getFirstName()
     {
@@ -95,7 +95,7 @@ public final class User implements Serializable
 
     /**
      * Return lastname of the client
-     * @return
+     * @return Lastname of the user
      */
     public final @NotNull String getLastName()
     {
@@ -105,7 +105,7 @@ public final class User implements Serializable
 	
 	/**
 	 * Return the User's sequence number
-	 * @return
+	 * @return Sequence number of the user
 	 */
 	public @NotNull BigInteger getSequenceNumber()
 	{

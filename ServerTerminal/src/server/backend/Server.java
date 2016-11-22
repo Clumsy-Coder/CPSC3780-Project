@@ -69,6 +69,7 @@ public class Server
 	
 	/**
 	 * Server starts in serverPort 5555
+	 * @param username The username of the server
 	 */
 	Server(String username)
 	{
@@ -78,8 +79,8 @@ public class Server
 	
 	/**
 	 * Server starts on specified serverPort
-	 *
-	 * @param serverPort
+	 * @param username The username of the server
+	 * @param serverPort Port number for the server to use
 	 */
 	Server(String username, int serverPort)
 	{

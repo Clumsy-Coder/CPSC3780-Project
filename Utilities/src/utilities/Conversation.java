@@ -47,7 +47,7 @@ public class Conversation
 	
 	/**
 	 * Adding a message to the conversation.
-	 * @param message
+	 * @param message Message to add for the conversation
 	 */
 	public void addMessage(@NotNull Message message)
 	{
@@ -75,7 +75,7 @@ public class Conversation
 	
 	/**
 	 * Return the <b>client's</b> sequence number
-	 * @return sequence number
+	 * @return sequence number Sequence number of the user (NOT the recipient)
 	 */
 	public @NotNull BigInteger getSequenceNumber()
 	{
@@ -85,7 +85,7 @@ public class Conversation
 	
 	/**
 	 * Return the <b>recipient's</b> sequence number
-	 * @return sequence number of the <b>recipient</b>
+	 * @return sequence number of the <b>recipient</b> (<b>NOT</b> the user)
 	 */
 	public @NotNull BigInteger getRecipientSequenceNumber()
 	{
@@ -105,7 +105,7 @@ public class Conversation
 	
 	/**
 	 * Return conversation
-	 * @return Conversation
+	 * @return Conversation if the recipient and the user.
 	 */
 	public @NotNull Vector<Message> getConversation()
 	{

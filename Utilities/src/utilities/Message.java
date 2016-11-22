@@ -68,7 +68,7 @@ public class Message implements Serializable
 	/**
 	 * Returns message Type
 	 *
-	 * @return
+	 * @return The message type
 	 */
 	public @NotNull MessageType getMessageType()
 	{
@@ -90,7 +90,7 @@ public class Message implements Serializable
 	/**
 	 * Returns the User who is receiving the Message
 	 *
-	 * @return
+	 * @return The User the message is being sent to
 	 */
 	public @Nullable User getDestination()
 	{
@@ -111,7 +111,7 @@ public class Message implements Serializable
 
 	/**
 	 * Returns the sequence number
-	 * @return
+	 * @return Sequence number of the message
 	 */
 	public @Nullable BigInteger getSequenceNumber()
 	{
