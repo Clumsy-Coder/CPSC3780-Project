@@ -1,6 +1,7 @@
 package utilities;
 
 import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
 
 import java.net.InetAddress;
 
@@ -23,6 +24,8 @@ public class UserNetworkInfo
 	 */
 	private User        user;
 	
+	private User        server;
+	
 	/**
 	 * Constructor initializing the object.
 	 * @param ipAddress IP address
@@ -36,6 +39,16 @@ public class UserNetworkInfo
 		this.user = user;
 		
 	}//END CONSTRUCTOR UserNetworkInfo(InetAddress, int, User)
+	
+	public UserNetworkInfo(@NotNull InetAddress ipAddress,
+	                       @NotNull int port,
+	                       @NotNull User user,
+	                       @NotNull User server)
+	{
+		this(ipAddress, port, user);
+		this.server = server;
+		
+	}//END CONSTRUCTOR UserNetworkInfo(InetAddres, int, User, User)
 	
 	/**
 	 * Returns the IP address
@@ -66,5 +79,22 @@ public class UserNetworkInfo
 		return user;
 		
 	}//END METHOD getUser()
+	
+	public void setUser(@NotNull User user)
+	{
+		this.user = user;
+	}//END METHOD setUser(User)
+	
+	public @Nullable User getServer()
+	{
+		return server;
+		
+	}//END METHOD getServer()
+	
+	public void setServer(@NotNull User server)
+	{
+		this.server = server;
+		
+	}//END METHOD setServer(User)
 	
 }//END CLASS UserNetworkInfo
