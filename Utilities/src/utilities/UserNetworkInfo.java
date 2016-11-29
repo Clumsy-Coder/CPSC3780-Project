@@ -80,10 +80,10 @@ public class UserNetworkInfo
 		
 	}//END METHOD getUser()
 	
-	public void setUser(@NotNull User user)
-	{
-		this.user = user;
-	}//END METHOD setUser(User)
+//	public void setUser(@NotNull User user)
+//	{
+//		this.user = user;
+//	}//END METHOD setUser(User)
 	
 	public @Nullable User getServer()
 	{
