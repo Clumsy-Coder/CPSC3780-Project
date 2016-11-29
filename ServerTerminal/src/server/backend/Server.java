@@ -34,7 +34,7 @@ public class Server
 	/**
 	 * Indicating the server as a user.
 	 */
-	private User            serverUser;
+	private UserNetworkInfo            serverUser;
 	/**
 	 * What port is the client is using. This changes everytime a message is received.
 	 */
@@ -67,6 +67,8 @@ public class Server
 	 */
 	private InetAddress             clientIPaddress;
 	
+	private Vector<UserNetworkInfo> connectedServers;
+	
 	/**
 	 * Server starts in serverPort 5555
 	 * @param username The username of the server
@@ -84,11 +86,21 @@ public class Server
 	 */
 	Server(String username, int serverPort)
 	{
-		serverUser = new User(username);
-		this.serverPort = serverPort;
-		messageBuffer = new Vector<Message>();
-		GET_MessageBuffer = new Vector<Message>();
-		connectedUsers = new Vector<UserNetworkInfo>();
+		try
+		{
+			this.serverPort = serverPort;
+			messageBuffer = new Vector<Message>();
+			GET_MessageBuffer = new Vector<Message>();
+			connectedUsers = new Vector<UserNetworkInfo>();
+			connectedServers = new Vector<UserNetworkInfo>();
+//			InetAddress ipAddress = InetAddress.getLocalHost();
+			serverUser = new UserNetworkInfo(InetAddress.getLocalHost(), serverPort, new User(username));
+		}
+		catch (UnknownHostException e)
+		{
+//			e.printStackTrace();
+			System.out.println(serverUser.getUser().getUsername() + " > Unable to set the ip address Server(String, int)");
+		}
 		
 	}//END CONSTRUCTOR Server(String, serverPort)
 	
@@ -117,7 +129,7 @@ public class Server
 				if (!keepGoing)
 				{
 					udpSocket.close();
-					System.out.println(serverUser.getUsername() + " > Server stopped.");
+					System.out.println(serverUser.getUser().getUsername() + " > Server stopped.");
 					return;
 				}//END if(!keepGoing)
 				
@@ -135,7 +147,7 @@ public class Server
 		
 		catch (SocketException e)
 		{
-			System.out.println(serverUser.getUsername() + " > Unable to create DatagramSocket");
+			System.out.println(serverUser.getUser().getUsername() + " > Unable to create DatagramSocket");
 			
 		}//END CATCH BLOCK SocketException
 		
@@ -160,7 +172,7 @@ public class Server
 	 * Used for sending user info to all connected clients.
 	 * @param message Message to send.
 	 */
-	private synchronized void broadcastUserList(@NotNull Message message)
+	private synchronized void broadcastUser(@NotNull Message message)
 	{
 		//iterate through the connectedUsers
 		//  make a message
@@ -173,14 +185,14 @@ public class Server
 		for (UserNetworkInfo curClient : connectedUsers)
 		{
 			Message broadcastMessage = new Message(message.getMessageType(),
-			                                       serverUser,
+			                                       serverUser.getUser(),
 			                                       curClient.getUser(),
 			                                       message.getPayload());
 			this.sendMessage(broadcastMessage);
 			
 		}//END for (UserNetworkInfo curClient : connectedUsers)
 		
-	}//END METHOD broadcastUserList(Message)
+	}//END METHOD broadcastUser(Message)
 	
 	/**
 	 * Returns the user network info of the specified user.
@@ -250,8 +262,32 @@ public class Server
 			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
 			oos.writeObject(sendMessage);
 			byte[] sendData = byteArrayOutputStream.toByteArray();
-			InetAddress destinationIP   = this.getClient(sendMessage.getDestination()).getIpAddress();
-			int         destinationPort = this.getClient(sendMessage.getDestination()).getPort();
+			UserNetworkInfo destinationUser = this.getClient(sendMessage.getDestination());
+			InetAddress destinationIP = null;
+			int         destinationPort = 0;
+			
+			//todo check the new send message is working. NOTE: possible null values
+			//check if the destination is connected to this server.
+			if(destinationUser.getServer().getUsername().equals(serverUser.getUser().getUsername()))
+			{
+				destinationIP = destinationUser.getIpAddress();
+				destinationPort = destinationUser.getPort();
+			}
+			
+			//if the destination is connected to another server
+			else
+			{
+				for(UserNetworkInfo curServer : connectedServers)
+				{
+					if(curServer.getServer().getUsername().equals(destinationUser.getUser().getUsername()))
+					{
+						destinationIP = curServer.getIpAddress();
+						destinationPort = curServer.getPort();
+						break;
+					}
+				}
+			}
+			
 			DatagramPacket sendPacket = new DatagramPacket(sendData,
 			                                               sendData.length,
                                                            destinationIP,
@@ -266,7 +302,7 @@ public class Server
 		catch (IOException e)
 		{
 			e.printStackTrace();
-			System.out.println(serverUser.getUsername() + " > Unable to write object or send packet");
+			System.out.println(serverUser.getUser().getUsername() + " > Unable to write object or send packet");
 			
 		}//END CATCH BLOCK IOException
 		
@@ -274,7 +310,7 @@ public class Server
 	
 	/**
 	 * Used for reading incoming messages.
-	 * The method will hold until a packet is recieved.
+	 * The method will hold until a packet is received.
 	 * @return The message that was read.
 	 */
 	private Message readMessage()
@@ -299,7 +335,7 @@ public class Server
 		catch (IOException e)
 		{
 			e.printStackTrace();
-			System.out.println(serverUser.getUsername() + " > unable to receive packet or read object");
+			System.out.println(serverUser.getUser().getUsername() + " > unable to receive packet or read object");
 			
 		}//END CATCH BLOCK IOException
 		
@@ -312,6 +348,99 @@ public class Server
 		return message;
 		
 	}//END METHOD readMessage()
+	
+	/**
+	 * Sends connected Users to the server
+	 * @param message Message being sent. Must contain destination
+	 */
+	//todo implement broadcastUserList method
+	private synchronized void broadcastUserList(@NotNull Message message)
+	{
+		/*
+		//iterate through the connectedUsers
+		//  make a message
+		//      MessageType: message type
+		//      source: server
+		//      destination: current User in the vector
+		//      payload: message payload.
+		//  send message
+		
+		for (UserNetworkInfo curClient : connectedUsers)
+		{
+			Message broadcastMessage = new Message(message.getMessageType(),
+			                                       serverUser,
+			                                       curClient.getUser(),
+			                                       message.getPayload());
+			this.sendMessage(broadcastMessage);
+			
+		}//END for (UserNetworkInfo curClient : connectedUsers)
+		 */
+		
+		//iterate through the connectedUsers
+		//  set the payload to the current connectUser
+		//  send the message to server
+		
+		for(UserNetworkInfo curClient : connectedUsers)
+		{
+			
+			message.setPayload(curClient);
+		}
+		
+	}//END METHOD broadcasrUserList(Message)
+	
+	//todo implement connectServer(String, int)
+	private synchronized void connectServer(@NotNull String ipAddress, @NotNull int port)
+	{
+		//make a message
+		//  Type: SERVER_CONNECT
+		//  Source: server
+		//  Destination: connecting server (server being connected to)
+		//  payload: server (info about this server)
+		//create a UserNetworkInfo
+		//  IP address: ip address (ip address for connecting to the server)
+		//  port: port (port number for the connecting to the server)
+		//  user: null (will be set later once a ACK_SEVER_CONNECT is received.)
+		//add UserNetworkInfo to connectedServer
+		//send the message to the server.
+		
+		try
+		{
+			InetAddress serverIpAddress = InetAddress.getByName(ipAddress);
+			UserNetworkInfo newServer = new UserNetworkInfo(serverIpAddress, port, null);
+			connectedServers.add(newServer);
+			Message message = new Message(MessageType.SERVER_CONNECT, serverUser.getUser(), null, serverUser);
+			
+			
+			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
+			oos.writeObject(message);
+			byte[] sendData = byteArrayOutputStream.toByteArray();
+			DatagramPacket sendPacket = new DatagramPacket(sendData,
+				                                               sendData.length,
+				                                               serverIpAddress,
+				                                               port);
+				
+			udpSocket.send(sendPacket);
+			oos.close();
+			byteArrayOutputStream.close();
+			
+		}//END TRY BLOCK
+		
+		catch (UnknownHostException e)
+		{
+			e.printStackTrace();
+			
+		}//END CATCH BLOCK UnknownHostException
+		
+		catch (IOException e)
+		{
+			e.printStackTrace();
+			System.out.println(serverUser.getUser().getUsername() +
+				                   " > Unable to write object or send packet: connectServer(String, int)");
+			
+		}//END CATCH BLOCK IOException
+		
+	}//END METHOD connectServer(String, int)
 	
 	/**
 	 * Handles messages that have SEND message type
@@ -329,7 +458,7 @@ public class Server
 		
 		System.out.println("------------------------------------------------------------");
 		messageBuffer.add(message);
-		System.out.println(serverUser.getUsername() + " > Message from: '" + message.getSource()
+		System.out.println(serverUser.getUser().getUsername() + " > Message from: '" + message.getSource()
 			.getUsername() + "'");
 		System.out.println("\t\tTo: " + message.getDestination().getUsername());
 		System.out.println("\t\tContent: " + message.getPayload().toString());
@@ -355,7 +484,7 @@ public class Server
 		//send the messages destined to client B from GET_MessageBuffer
 		
 		System.out.println("------------------------------------------------------------");
-		System.out.println(serverUser.getUsername() + " > GET from: '" + message.getSource()
+		System.out.println(serverUser.getUser().getUsername() + " > GET from: '" + message.getSource()
 			.getUsername() + "'");
 		
 		//using a new thread in case there's multiple messages that needs to be sent
@@ -384,14 +513,14 @@ public class Server
 				//  payload: text message
 				//  NOTE: sequence number is embedded.
 				
-				System.out.println("\n" + serverUser.getUsername() + " > Sending GET to " + GET_MessageBuffer.get(
+				System.out.println("\n" + serverUser.getUser().getUsername() + " > Sending GET to " + GET_MessageBuffer.get(
 					i).getDestination().getUsername());
 				
 				Message getMessage = GET_MessageBuffer.get(i);
 				getMessage.setMessageType(MessageType.GET);
 
 				this.sendMessage(getMessage);
-				System.out.println(serverUser.getUsername() + " > GET request sent");
+				System.out.println(serverUser.getUser().getUsername() + " > GET request sent");
 				
 			}//END for (int i = 0; i < GET_MessageBuffer.size(); i++)
 			
@@ -424,7 +553,7 @@ public class Server
 		//remove message from GET_requestBuffer
 		
 		System.out.println("------------------------------------------------------------");
-		System.out.println(serverUser.getUsername() + " > ACK from: '" + message.getSource().getUsername() + "'");
+		System.out.println(serverUser.getUser().getUsername() + " > ACK from: '" + message.getSource().getUsername() + "'");
 		System.out.println("\t\tTo: " + message.getDestination().getUsername());
 		BigInteger bigInt = (BigInteger) message.getPayload();
 		System.out.println("\t\tSequence number: " + (bigInt != null ? bigInt.toString() : null));
@@ -447,7 +576,7 @@ public class Server
 				Message ackMessage = GET_MessageBuffer.remove(i);
 				
 				this.sendMessage(message);
-				System.out.println("\n" + serverUser.getUsername() + " > ACK sent");
+				System.out.println("\n" + serverUser.getUser().getUsername() + " > ACK sent");
 				System.out.println("\t\tGET_MessageBuffer.size() : " + GET_MessageBuffer.size());
 				
 			}//END IF FOR checking the sequence number, source and destination match properly
@@ -466,7 +595,6 @@ public class Server
 	private final synchronized void handleUSERS_message(@NotNull Message message)
 	{
 		System.out.println("------------------------------------------------------------");
-		//let everyone know who just connected to the server.
 		
 		//message format received:
 		//  Type: USERS
@@ -475,7 +603,50 @@ public class Server
 		//  payload: User object (must contain initial sequence num)
 		//  NOTE: must contain sequence number.
 		
+		//iterate through the connectedUser vector
+		//  check if the user exists
+		//      if true:
+		//          set userExists to true
+		//          break out of the loop
+		//check if userExists is set to false
+		//  if true:
+		//      add the user to the connectedUser list.
+		//
+		//let every client know who just connected to the server.
+		//
+		//let every server connected know who just connected to the server
+		
+		boolean userExists = false;
+//		User newUser = (User) message.getPayload();
+		UserNetworkInfo newUser = (UserNetworkInfo) message.getPayload();
+		for(UserNetworkInfo curUser : connectedUsers)
+		{
+//			if(curUser.getUser().getUsername().equals(newUser.getUsername()))
+			if(curUser.getUser().getUsername().equals(newUser.getUser().getUsername()))
+			{
+				userExists = true;
+				break;
+			}
+			
+		}
+		
+		//if it's a new user.
+		if(!userExists)
+		{
+			connectedUsers.add(newUser);
+		}
+		
+		//tell all clients connected to the server
 		if (connectedUsers.size() >= 2)
+		{
+			Message newClientMessage = new Message(MessageType.USERS,
+			                                       serverUser.getUser(),
+			                                       null,
+			                                       message.getSource());
+			this.broadcastUser(newClientMessage);
+		}
+		
+		if(connectedServers.size() > 0)
 		{
 			
 		}
@@ -519,7 +690,7 @@ public class Server
 		User            user         = message.getSource();
 		UserNetworkInfo clientIPInfo = new UserNetworkInfo(clientIPaddress, clientPort, user);
 		
-		System.out.println(serverUser.getUsername() + " > User: '" + user.getUsername() + "' is now CONNECTED");
+		System.out.println(serverUser.getUser().getUsername() + " > User: '" + user.getUsername() + "' is now CONNECTED");
 		System.out.println("\t\tsequence number: " + user.getSequenceNumber());
 		
 		//todo tell the newly connected client who is currently connected
@@ -527,7 +698,7 @@ public class Server
 		for (UserNetworkInfo connectedUser : connectedUsers)
 		{
 			Message broadcastMessage = new Message(MessageType.USERS,
-			                                       serverUser,
+			                                       serverUser.getUser(),
 			                                       message.getSource(),
                                                    connectedUser.getUser());
 			
@@ -565,7 +736,7 @@ public class Server
 		
 		if (connectedUsers.size() + 1 >= 2)
 		{
-			System.out.println(serverUser.getUsername() + " > sending info to all connected users about new user. ");
+			System.out.println(serverUser.getUser().getUsername() + " > sending info to all connected users about new user. ");
 			//message format sent
 			//  Type: USERS
 			//  source: server
@@ -574,13 +745,14 @@ public class Server
 			//  NOTE: must contain sequence number
 			
 			Message newClientMessage = new Message(MessageType.USERS,
-			                                       serverUser,
+			                                       serverUser.getUser(),
 			                                       null,
 			                                       message.getSource());
-			this.broadcastUserList(newClientMessage);
+			this.broadcastUser(newClientMessage);
 			
 		}
 		
+		clientIPInfo.setServer(serverUser.getUser());
 		connectedUsers.add(clientIPInfo);
 		System.out.println("\t\tconnected clients: " + connectedUsers.size());
 		
@@ -615,7 +787,7 @@ public class Server
 		//get the client and remove it from the connectedUser vector
 		User user = message.getSource();
 		this.removeClient(user);
-		System.out.println(serverUser.getUsername() + " > User: '" + user.getUsername() + "' is now DISCONNECTED");
+		System.out.println(serverUser.getUser().getUsername() + " > User: '" + user.getUsername() + "' is now DISCONNECTED");
 		
 		//broadcast the connectUser vector to all connected users/server
 		//TODO implement broadcast the updated userList vector to everyone
@@ -632,11 +804,99 @@ public class Server
 			                                        message.getSource(),
 			                                        null,
 			                                        message.getSource());
-			this.broadcastUserList(disconnectMessage);
+			this.broadcastUser(disconnectMessage);
 		}
 		System.out.println("------------------------------------------------------------");
 		
 	}//END METHOD handleDISCONNECT_message(Message)
+	
+	//todo implement handleSERVER_CONNECT_message(Message)
+	private final synchronized void handleSERVER_CONNECT_message(Message message)
+	{
+		//create a new UserNetworkInfo
+		//  ipAddress: ipAddress
+		//  port: port
+		//  user: user
+		//send ACK_SERVER_CONNECT back to the server
+		//tell the new server who is currently connected to this server (not new server)
+		
+		User newServer = (User) message.getPayload();
+		UserNetworkInfo newServerInfo = new UserNetworkInfo(clientIPaddress, clientPort, newServer);
+		connectedServers.add(newServerInfo);
+		
+		Message ackMessage = new Message(MessageType.ACK_SERVER_CONNECT, serverUser.getUser(), newServer, null);
+		
+		try
+		{
+			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
+			oos.writeObject(ackMessage);
+			byte[] sendData = byteArrayOutputStream.toByteArray();
+			DatagramPacket sendPacket = new DatagramPacket(sendData,
+			                                               sendData.length,
+			                                               clientIPaddress,
+			                                               clientPort);
+			
+			udpSocket.send(sendPacket);
+			oos.close();
+			byteArrayOutputStream.close();
+			
+			
+			
+		}//END TRY BLOCK
+		
+		catch(IOException e)
+		{
+			e.printStackTrace();
+			System.out.println(serverUser.getUser().getUsername() +
+				                   " > Unable to write object or send packet: handleSERVER_CONNECT_message(Message)");
+			
+		}//END CATCH BLOCK IOException
+		
+	}//END METHOD handleSERVER_CONNECT_message(Message)
+	
+	//todo implement handleSERVER_DISCONNECT(Message)
+	private final synchronized void handleSERVER_DISCONNECT(Message message)
+	{
+		//find the server disconnecting
+		//  remove it from the connectedServer vector
+		
+	}//END METHOD handleSERVER_DISCONNECT(Message)
+	
+	//todo implement handleACK_SERVER_CONNECT_message(Message)
+	private final synchronized void handleACK_SERVER_CONNECT_message(Message message)
+	{
+		//message content
+		//  Type: ACK_SERVER_CONNECT
+		//  source: source
+		//  destination : destination
+		//  payload: User (contains info about the server)
+		
+		//find which server is being acknowledged from connectedServers
+		//set the user from the message
+		//tell the server which clients are connected to this server
+		
+		for(UserNetworkInfo curServer : connectedServers)
+		{
+			if(curServer.getUser().getUsername().equals(message.getSource().getUsername()))
+			{
+				User newServer = (User) message.getPayload();
+				curServer.setServer(newServer);
+			}
+			
+		}
+		
+		User destination = (User) message.getPayload();
+		Message userMessage = new Message(MessageType.USERS, serverUser.getUser(), destination, null);
+		Runnable userThread  = () ->
+		{
+			this.broadcastUserList(userMessage);
+		};
+		
+		new Thread(userThread).start();
+		
+		
+	}//END METHOD handleACK_SERVER_CONNECT_message(Message)
 	
 	/**
 	 * Receives the message and calls the appropiate method to
@@ -706,9 +966,27 @@ public class Server
 				
 			}//END CASE DISCONNECT
 			
+			case SERVER_CONNECT:
+			{
+				this.handleSERVER_CONNECT_message(message);
+				break;
+			}
+			
+			case ACK_SERVER_CONNECT:
+			{
+				this.handleACK_SERVER_CONNECT_message(message);
+				break;
+			}
+			
+			case SERVER_DISCONNECT:
+			{
+				this.handleSERVER_DISCONNECT(message);
+				break;
+			}
+			
 			default:
 			{
-				System.out.println(serverUser.getUsername() + " > unknown message type from: " + message.getSource()
+				System.out.println(serverUser.getUser().getUsername() + " > unknown message type from: " + message.getSource()
 					.getUsername());
 				break;
 				
