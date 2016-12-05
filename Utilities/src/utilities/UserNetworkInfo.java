@@ -3,14 +3,16 @@ package utilities;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 
 /**
  * Class used for keeping track who is connected to the server.<br>
  * Used by Server.java
  */
-public class UserNetworkInfo
+public class UserNetworkInfo implements Serializable
 {
+	private static final long serialVersionUID = -3850770004132892410L;
 	/**
 	 * IP address for the user
 	 */
@@ -25,6 +27,8 @@ public class UserNetworkInfo
 	private User        user;
 	
 	private User        server;
+	
+	
 	
 	/**
 	 * Constructor initializing the object.
@@ -97,4 +101,8 @@ public class UserNetworkInfo
 		
 	}//END METHOD setServer(User)
 	
+	public void setUser(User user)
+	{
+		this.user = user;
+	}
 }//END CLASS UserNetworkInfo
