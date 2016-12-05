@@ -69,6 +69,8 @@ public class Server
 	
 	private Vector<UserNetworkInfo> connectedServers;
 	
+	private ListenServer serverListen;
+	
 	/**
 	 * Server starts in serverPort 5555
 	 * @param username The username of the server
@@ -84,7 +86,7 @@ public class Server
 	 * @param username The username of the server
 	 * @param serverPort Port number for the server to use
 	 */
-	Server(String username, int serverPort)
+	Server(@NotNull String username, @NotNull int serverPort)
 	{
 		try
 		{
@@ -94,8 +96,14 @@ public class Server
 			connectedUsers = new Vector<UserNetworkInfo>();
 			connectedServers = new Vector<UserNetworkInfo>();
 //			InetAddress ipAddress = InetAddress.getLocalHost();
-			serverUser = new UserNetworkInfo(InetAddress.getLocalHost(), serverPort, new User(username));
+			serverUser = new UserNetworkInfo(Inet4Address.getLocalHost(),
+			                                 serverPort,
+			                                 new User(username));
+			System.out.println(serverUser.getUser().getUsername() + " > IP address: " +
+				                   serverUser.getIpAddress().getHostAddress() +
+				                   " Server(String, int)");
 		}
+		
 		catch (UnknownHostException e)
 		{
 //			e.printStackTrace();
@@ -103,6 +111,13 @@ public class Server
 		}
 		
 	}//END CONSTRUCTOR Server(String, serverPort)
+	
+	Server(String username, int serverPort, String connectingServerIP, int connectingPort)
+	{
+		this(username, serverPort);
+		this.startServer();
+		this.connectServer(connectingServerIP, connectingPort);
+	}
 	
 	/**
 	 * Starts the server and listens for incoming messages.
@@ -124,24 +139,27 @@ public class Server
 			System.out.println("Server up and running on serverPort: " + Inet4Address.getLocalHost()
 				.getHostAddress() + ":" + serverPort);
 			keepGoing = true;
-			while (keepGoing)
-			{
-				if (!keepGoing)
-				{
-					udpSocket.close();
-					System.out.println(serverUser.getUser().getUsername() + " > Server stopped.");
-					return;
-				}//END if(!keepGoing)
-				
-				Message message = this.readMessage();
-				//handle the message if the Message object is not null
-				if (message != null)
-				{
-					this.handleMessage(message);
-					
-				}//END if(message != null)
-				
-			}//END while(keepGoing)
+//			while (keepGoing)
+//			{
+//				if (!keepGoing)
+//				{
+//					udpSocket.close();
+//					System.out.println(serverUser.getUser().getUsername() + " > Server stopped.");
+//					return;
+//				}//END if(!keepGoing)
+//
+//				Message message = this.readMessage();
+//				//handle the message if the Message object is not null
+//				if (message != null)
+//				{
+//					this.handleMessage(message);
+//
+//				}//END if(message != null)
+//
+//			}//END while(keepGoing)
+			
+			serverListen = new ListenServer();
+			serverListen.start();
 			
 		}//END TRY BLOCK
 		
@@ -164,7 +182,24 @@ public class Server
 	 */
 	public void stopServer()
 	{
+		//check if there is any server connected
+		for(UserNetworkInfo curServer : connectedServers)
+		{
+			Message disconnectMessage = new Message(MessageType.SERVER_DISCONNECT,
+			                                        serverUser.getUser(),
+			                                        curServer.getUser(),
+			                                        null);
+			
+			this.sendServerMessage(disconnectMessage);
+		}
+		
 		keepGoing = false;
+		serverListen.stop();
+		
+		if(udpSocket != null)
+		{
+			udpSocket.close();
+		}
 		
 	}//END METHOD stopServer()
 	
@@ -272,6 +307,7 @@ public class Server
 			{
 				destinationIP = destinationUser.getIpAddress();
 				destinationPort = destinationUser.getPort();
+				
 			}
 			
 			//if the destination is connected to another server
@@ -279,7 +315,8 @@ public class Server
 			{
 				for(UserNetworkInfo curServer : connectedServers)
 				{
-					if(curServer.getServer().getUsername().equals(destinationUser.getUser().getUsername()))
+//					if(curServer.getServer().getUsername().equals(destinationUser.getServer().getUsername()))
+					if(destinationUser.getServer().getUsername().equals(curServer.getUser().getUsername()))
 					{
 						destinationIP = curServer.getIpAddress();
 						destinationPort = curServer.getPort();
@@ -307,6 +344,45 @@ public class Server
 		}//END CATCH BLOCK IOException
 		
 	}//END METHOD sendMessage(MessageType, User, User, Object)
+	
+	private synchronized void sendServerMessage(@NotNull Message message)
+	{
+		try
+		{
+			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
+			oos.writeObject(message);
+			byte[] sendData = byteArrayOutputStream.toByteArray();
+//			UserNetworkInfo destinationUser = this.getClient(message.getDestination());
+			InetAddress destinationIP = null;
+			int         destinationPort = 0;
+			
+			for( UserNetworkInfo curServer : connectedServers)
+			{
+				if(curServer.getUser().getUsername().equals(message.getDestination().getUsername()))
+				{
+					destinationIP = curServer.getIpAddress();
+					destinationPort = curServer.getPort();
+				}
+			}
+			
+			DatagramPacket sendPacket = new DatagramPacket(sendData,
+			                                               sendData.length,
+			                                               destinationIP,
+			                                               destinationPort);
+			
+			udpSocket.send(sendPacket);
+			oos.close();
+			byteArrayOutputStream.close();
+			
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+		
+		
+	}//END METHOD sendServerMessage(Message)
 	
 	/**
 	 * Used for reading incoming messages.
@@ -384,12 +460,13 @@ public class Server
 		{
 			
 			message.setPayload(curClient);
+			this.sendServerMessage(message);
 		}
 		
 	}//END METHOD broadcasrUserList(Message)
 	
 	//todo implement connectServer(String, int)
-	private synchronized void connectServer(@NotNull String ipAddress, @NotNull int port)
+	public synchronized void connectServer(@NotNull String ipAddress, @NotNull int port)
 	{
 		//make a message
 		//  Type: SERVER_CONNECT
@@ -405,10 +482,14 @@ public class Server
 		
 		try
 		{
-			InetAddress serverIpAddress = InetAddress.getByName(ipAddress);
+			InetAddress serverIpAddress = Inet4Address.getByName(ipAddress);
+			System.out.println("IP address: " + serverIpAddress.getHostAddress());
 			UserNetworkInfo newServer = new UserNetworkInfo(serverIpAddress, port, null);
 			connectedServers.add(newServer);
-			Message message = new Message(MessageType.SERVER_CONNECT, serverUser.getUser(), null, serverUser);
+			Message message = new Message(MessageType.SERVER_CONNECT,
+			                              serverUser.getUser(),
+			                              null,
+			                              serverUser);
 			
 			
 			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -457,14 +538,54 @@ public class Server
 		//  NOTE: sequence number must be embedded and NOT null
 		
 		System.out.println("------------------------------------------------------------");
-		messageBuffer.add(message);
+//		messageBuffer.add(message);
 		System.out.println(serverUser.getUser().getUsername() + " > Message from: '" + message.getSource()
 			.getUsername() + "'");
 		System.out.println("\t\tTo: " + message.getDestination().getUsername());
 		System.out.println("\t\tContent: " + message.getPayload().toString());
 		System.out.println("\t\tSequence number: " + message.getSequenceNumber());
+		
+		boolean thisServer = false;
+//		for(UserNetworkInfo curClient : connectedUsers)
+//		{
+//			if(curClient.getUser().getUsername().equals(message.getDestination().getUsername()))
+//			{
+//				thisServer = true;
+//				break;
+//			}
+//		}
+		
+		UserNetworkInfo destination = this.getClient(message.getDestination());
+		if(destination.getServer().getUsername().equals(serverUser.getUser().getUsername()))
+		{
+			thisServer = true;
+		}
+		
+		if(thisServer)
+		{
+			messageBuffer.add(message);
+		}
+		
+		else
+		{
+			System.out.println(serverUser.getUser().getUsername() + " > Forwarding message");
+			this.sendMessage(message);
+		}
+		
 		System.out.println("------------------------------------------------------------");
 		
+		//todo handle messages from another server that is destined to another server (NOT this server)
+			/*  ex: server config
+				S1 - S2 - S3
+			    S1 wants to send a message to S3
+			        S1 sends the message to S2
+			        S2 checks if the message is destined for this server
+			            if true: handle it
+			            else:
+			                check which server to send it to
+			                send it. (in this case send it to S3)
+			                    The destination IP changes.
+			*/
 	}//END METHOD handleSEND_message(Message)
 	
 	/**
@@ -592,6 +713,7 @@ public class Server
 	 * Handles messages that have USERS message type
 	 * @param message Message to handle
 	 */
+	//todo implement handleUSERS_message(Message)
 	private final synchronized void handleUSERS_message(@NotNull Message message)
 	{
 		System.out.println("------------------------------------------------------------");
@@ -608,7 +730,7 @@ public class Server
 		//      if true:
 		//          set userExists to true
 		//          break out of the loop
-		//check if userExists is set to false
+		//check if it's a new user
 		//  if true:
 		//      add the user to the connectedUser list.
 		//
@@ -616,14 +738,22 @@ public class Server
 		//
 		//let every server connected know who just connected to the server
 		
+		System.out.println(serverUser.getUser().getUsername() + " > USERS message received");
+		System.out.println("\t\tSource: " + message.getSource().getUsername());
+		System.out.println("\t\tPayload:");
+		
 		boolean userExists = false;
 //		User newUser = (User) message.getPayload();
 		UserNetworkInfo newUser = (UserNetworkInfo) message.getPayload();
+		System.out.println("\t\t\tUsername: " + newUser.getUser().getUsername());
+		System.out.println("\t\t\tserver: " + newUser.getServer().getUsername());
+		
 		for(UserNetworkInfo curUser : connectedUsers)
 		{
 //			if(curUser.getUser().getUsername().equals(newUser.getUsername()))
 			if(curUser.getUser().getUsername().equals(newUser.getUser().getUsername()))
 			{
+				System.out.println(serverUser.getUser().getUsername() + " > User already exists");
 				userExists = true;
 				break;
 			}
@@ -634,20 +764,29 @@ public class Server
 		if(!userExists)
 		{
 			connectedUsers.add(newUser);
-		}
-		
-		//tell all clients connected to the server
-		if (connectedUsers.size() >= 2)
-		{
-			Message newClientMessage = new Message(MessageType.USERS,
-			                                       serverUser.getUser(),
-			                                       null,
-			                                       message.getSource());
-			this.broadcastUser(newClientMessage);
-		}
-		
-		if(connectedServers.size() > 0)
-		{
+			
+			//tell all clients connected to the server
+			if (connectedUsers.size() >= 2)
+			{
+				for(UserNetworkInfo curClient : connectedUsers)
+				{
+					if(curClient.getServer().getUsername().equals(serverUser.getUser().getUsername()))
+					{
+						Message newClientMessage = new Message(MessageType.USERS,
+						                                       serverUser.getUser(),
+						                                       curClient.getUser(),
+						                                       newUser.getUser());
+						
+						this.sendMessage(newClientMessage);
+//				        this.broadcastUser(newClientMessage);
+					}
+				}
+			}
+			
+			if(connectedServers.size() > 0)
+			{
+				
+			}
 			
 		}
 		
@@ -736,7 +875,8 @@ public class Server
 		
 		if (connectedUsers.size() + 1 >= 2)
 		{
-			System.out.println(serverUser.getUser().getUsername() + " > sending info to all connected users about new user. ");
+			System.out.println(serverUser.getUser().getUsername() +
+				                   " > sending info to all connected users about new user. ");
 			//message format sent
 			//  Type: USERS
 			//  source: server
@@ -744,15 +884,40 @@ public class Server
 			//  payload: User object
 			//  NOTE: must contain sequence number
 			
-			Message newClientMessage = new Message(MessageType.USERS,
-			                                       serverUser.getUser(),
-			                                       null,
-			                                       message.getSource());
-			this.broadcastUser(newClientMessage);
+			//send the message to the clients connected to this server
+			for(UserNetworkInfo curClient : connectedUsers)
+			{
+				if(curClient.getServer().getUsername().equals(serverUser.getUser().getUsername()))
+				{
+					Message newClientMessage = new Message(MessageType.USERS,
+					                                       serverUser.getUser(),
+					                                       curClient.getUser(),
+					                                       message.getSource());
+					
+					this.sendMessage(newClientMessage);
+					
+				}
+//				this.broadcastUser(newClientMessage);
+				
+			}
+			
+			//todo do you need broadcastUser(Message) and broadcastUserList(Message)? use one method to send the info to everyone.
 			
 		}
 		
 		clientIPInfo.setServer(serverUser.getUser());
+		
+		for(UserNetworkInfo curServer : connectedServers)
+		{
+			//tell other severs who just connected
+			Message serverMsg = new Message(MessageType.USERS,
+			                                serverUser.getUser(),
+			                                curServer.getUser(),
+			                                clientIPInfo);
+			
+			//todo test sending client info to another server when a client connects to the server
+			this.sendServerMessage(serverMsg);
+		}
 		connectedUsers.add(clientIPInfo);
 		System.out.println("\t\tconnected clients: " + connectedUsers.size());
 		
@@ -786,7 +951,9 @@ public class Server
 		System.out.println("------------------------------------------------------------");
 		//get the client and remove it from the connectedUser vector
 		User user = message.getSource();
+		UserNetworkInfo userNetworkInfo = this.getClient(user);
 		this.removeClient(user);
+		
 		System.out.println(serverUser.getUser().getUsername() + " > User: '" + user.getUsername() + "' is now DISCONNECTED");
 		
 		//broadcast the connectUser vector to all connected users/server
@@ -799,12 +966,34 @@ public class Server
 			//  source: server
 			//  destination: all users/servers connected
 			//  payload: User object
+			for(UserNetworkInfo curClient : connectedUsers)
+			{
+				if(curClient.getServer().getUsername().equals(serverUser.getUser().getUsername()))
+				{
+					Message disconnectMessage = new Message(MessageType.DISCONNECT,
+					                                        message.getSource(),
+					                                        curClient.getUser(),
+					                                        message.getSource());
+//					this.broadcastUser(disconnectMessage);
+					this.sendMessage(disconnectMessage);
+					
+				}
+				
+			}
 			
-			Message disconnectMessage = new Message(MessageType.DISCONNECT,
-			                                        message.getSource(),
-			                                        null,
-			                                        message.getSource());
-			this.broadcastUser(disconnectMessage);
+			for(UserNetworkInfo curServer : connectedServers)
+			{
+				if(userNetworkInfo.getServer().getUsername().equals(curServer.getUser().getUsername()))
+				{
+					continue;
+				}
+				Message disconnectMessage = new Message(MessageType.DISCONNECT,
+				                                        message.getSource(),
+				                                        curServer.getUser(),
+				                                        message.getSource());
+				this.sendServerMessage(disconnectMessage);
+				
+			}
 		}
 		System.out.println("------------------------------------------------------------");
 		
@@ -820,38 +1009,69 @@ public class Server
 		//send ACK_SERVER_CONNECT back to the server
 		//tell the new server who is currently connected to this server (not new server)
 		
-		User newServer = (User) message.getPayload();
-		UserNetworkInfo newServerInfo = new UserNetworkInfo(clientIPaddress, clientPort, newServer);
-		connectedServers.add(newServerInfo);
+		System.out.println("------------------------------------------------------------");
 		
-		Message ackMessage = new Message(MessageType.ACK_SERVER_CONNECT, serverUser.getUser(), newServer, null);
+		UserNetworkInfo newServer = (UserNetworkInfo) message.getPayload();
+//		UserNetworkInfo newServerInfo = new UserNetworkInfo(clientIPaddress, clientPort, newServer.getUser());
+//		connectedServers.add(newServerInfo);
+		connectedServers.add(newServer);
+		System.out.println(serverUser.getUser().getUsername() + " > SERVER_CONNECT message received");
+		System.out.println("\t\tSource: " + message.getSource().getUsername());
+		System.out.println("\t\tIP address: " + newServer.getIpAddress().getHostAddress());
+		System.out.println("\t\tPort: " + newServer.getPort());
 		
-		try
-		{
-			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
-			oos.writeObject(ackMessage);
-			byte[] sendData = byteArrayOutputStream.toByteArray();
-			DatagramPacket sendPacket = new DatagramPacket(sendData,
-			                                               sendData.length,
-			                                               clientIPaddress,
-			                                               clientPort);
-			
-			udpSocket.send(sendPacket);
-			oos.close();
-			byteArrayOutputStream.close();
-			
-			
-			
-		}//END TRY BLOCK
+		Message ackMessage = new Message(MessageType.ACK_SERVER_CONNECT,
+		                                 serverUser.getUser(),
+		                                 newServer.getUser(),
+		                                 serverUser);
 		
-		catch(IOException e)
-		{
-			e.printStackTrace();
-			System.out.println(serverUser.getUser().getUsername() +
-				                   " > Unable to write object or send packet: handleSERVER_CONNECT_message(Message)");
+//		try
+//		{
+//			ByteArrayOutputStream byteArra/*yOutputStream = new ByteArrayOutputStream();
+//			ObjectOutputStream    oos                   = new ObjectOutputStream(byteArrayOutputStream);
+//			oos.writeObject(ackMessage);
+//			byte[] sendData = byteArrayOutputStream.toByteArray();
+//			DatagramPacket sendPacket = new DatagramPacket(sendData,
+//			                                               sendData.length,
+//			                                               newServer.getIpAddress(),
+//			                                               newServer.getPort());
+//
+//			udpSocket.send(sendPacket);
+//			oos.close();
+//			byteArrayOutputStream.close();
+		
+			System.out.println(serverUser.getUser().getUsername() + " > Sending ACK_SERVER_CONNECT to: ");
+			System.out.println("\t\tServer: " + ackMessage.getDestination().getUsername());
+			System.out.println("\t\tIP address: " + newServer.getIpAddress().getHostAddress());
+			System.out.println("\t\tPort: " + newServer.getPort());
+			this.sendServerMessage(ackMessage);
+		
+			System.out.println(serverUser.getUser().getUsername() + " > Sending client info");
+			//tell the new server who is connected to this server
+			Message userMessage = new Message(MessageType.USERS,
+			                                  serverUser.getUser(),
+			                                  newServer.getUser(),
+			                                  null);
+			Runnable userThread  = () ->
+			{
+				this.broadcastUserList(userMessage);
+			};
 			
-		}//END CATCH BLOCK IOException
+			new Thread(userThread).start();
+			
+			//todo handleServerConnect_message(Message) tell the new server who is connected.
+			
+//		}//END TRY BLOCK
+		
+//		catch(IOException e)
+//		{
+//			e.printStackTrace();
+//			System.out.println(serverUser.getUser().getUsername() +
+//				                   " > Unable to write object or send packet: handleSERVER_CONNECT_message(Message)");
+//
+//		}//END CATCH BLOCK IOException
+		
+		System.out.println("------------------------------------------------------------");
 		
 	}//END METHOD handleSERVER_CONNECT_message(Message)
 	
@@ -860,6 +1080,24 @@ public class Server
 	{
 		//find the server disconnecting
 		//  remove it from the connectedServer vector
+		
+		System.out.println("------------------------------------------------------------");
+		System.out.println(serverUser.getUser().getUsername() + " > SERVER_DISCONNECT message received");
+		System.out.println("\t\tSource: " + message.getSource().getUsername());
+		
+		for(int i  = 0; i < connectedServers.size(); i++)
+		{
+			if(connectedServers.get(i).getUser().getUsername().equals(message.getSource().getUsername()))
+			{
+				connectedServers.remove(i);
+				break;
+			}
+		}
+		
+		System.out.println(serverUser.getUser().getUsername() + " > Server: " + message.getSource().getUsername() +
+			                   " disconnected");
+		System.out.println("------------------------------------------------------------");
+		
 		
 	}//END METHOD handleSERVER_DISCONNECT(Message)
 	
@@ -876,24 +1114,47 @@ public class Server
 		//set the user from the message
 		//tell the server which clients are connected to this server
 		
+		System.out.println("------------------------------------------------------------");
+		
+		UserNetworkInfo ackServer = (UserNetworkInfo) message.getPayload();
+		
+		System.out.println(serverUser.getUser().getUsername() + " > ACK_SERVER_CONNECT message received");
+		System.out.println("\t\tSource: " + message.getSource().getUsername());
+		System.out.println("\t\tIP address: " + ackServer.getIpAddress().getHostAddress());
+		System.out.println("\t\tPort: " + ackServer.getPort());
+		
+		System.out.println(serverUser.getUser().getUsername() + " > setting server");
+		
 		for(UserNetworkInfo curServer : connectedServers)
 		{
-			if(curServer.getUser().getUsername().equals(message.getSource().getUsername()))
+//			if(curServer.getUser().getUsername().equals(message.getSource().getUsername()))
+//			if(curServer.getIpAddress().equals(ackServer.getIpAddress()))
+			if(curServer.getIpAddress().getHostAddress().equals(ackServer.getIpAddress().getHostAddress()))
 			{
-				User newServer = (User) message.getPayload();
-				curServer.setServer(newServer);
+//				User newServer = (User) message.getPayload();
+				System.out.println(serverUser.getUser().getUsername() + " > User object set");
+				curServer.setUser(ackServer.getUser());
 			}
 			
 		}
 		
-		User destination = (User) message.getPayload();
-		Message userMessage = new Message(MessageType.USERS, serverUser.getUser(), destination, null);
+		System.out.println(serverUser.getUser().getUsername() + " > Sending client info. " +
+							"connectUsers.size() : " + connectedUsers.size());
+		
+//		User destination = (User) message.getPayload();
+		User destination = ackServer.getUser();
+		Message userMessage = new Message(MessageType.USERS,
+		                                  serverUser.getUser(),
+		                                  destination,
+		                                  null);
 		Runnable userThread  = () ->
 		{
 			this.broadcastUserList(userMessage);
 		};
 		
 		new Thread(userThread).start();
+		
+		System.out.println("------------------------------------------------------------");
 		
 		
 	}//END METHOD handleACK_SERVER_CONNECT_message(Message)
@@ -995,5 +1256,51 @@ public class Server
 		}//END switch(message.getMessageType)
 		
 	}//END METHOD handleMessage(Message)
+	
+	public void printServers()
+	{
+		System.out.println("------------------------------------------------------------");
+		if(connectedServers.size() > 0)
+		{
+			for(UserNetworkInfo curServer : connectedServers)
+			{
+				System.out.println("Server name: " + curServer.getUser().getUsername());
+				System.out.println("\t\tIP address: " + curServer.getIpAddress().getHostAddress());
+				System.out.println("\t\tPort: " + curServer.getPort());
+			}
+		}
+		
+		else
+		{
+			System.out.println("No servers connected.");
+		}
+		
+		System.out.println("------------------------------------------------------------");
+	}
+	
+	private class ListenServer extends Thread
+	{
+		public void run()
+		{
+			while (keepGoing)
+			{
+				if (!keepGoing)
+				{
+					udpSocket.close();
+					System.out.println(serverUser.getUser().getUsername() + " > Server stopped.");
+					return;
+				}//END if(!keepGoing)
+				
+				Message message = readMessage();
+				//handle the message if the Message object is not null
+				if (message != null)
+				{
+					handleMessage(message);
+					
+				}//END if(message != null)
+				
+			}//END while(keepGoing)
+		}
+	}
 	
 }//END CLASS Server
