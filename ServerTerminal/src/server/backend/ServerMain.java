@@ -75,6 +75,21 @@ public class ServerMain
 			{
 				server.printServers();
 			}
+			
+			else if(line.equalsIgnoreCase("CLIENTS"))
+			{
+				server.printClients();
+			}
+			
+			else if (line.equalsIgnoreCase("WHOAMI"))
+			{
+				server.whoami();
+			}
+			
+			else
+			{
+				System.out.println("Invalid command.");
+			}
 		}
 		
 		System.out.println("Stopping server");
