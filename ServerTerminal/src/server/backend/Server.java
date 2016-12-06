@@ -258,6 +258,19 @@ public class Server
 		
 	}//END METHOD getClient(User)
 	
+	private synchronized UserNetworkInfo getServer(@NotNull User server)
+	{
+		for(UserNetworkInfo curServer : connectedServers)
+		{
+			if(curServer.getUser().getUsername().equals(server.getUsername()))
+			{
+				return curServer;
+			}
+		}
+		
+		return null;
+	}
+	
 	/**
 	 * Used for removing a client from the list of connected users
 	 * @param user Client to remove
@@ -298,6 +311,7 @@ public class Server
 			oos.writeObject(sendMessage);
 			byte[] sendData = byteArrayOutputStream.toByteArray();
 			UserNetworkInfo destinationUser = this.getClient(sendMessage.getDestination());
+			UserNetworkInfo destinationServer = this.getServer(destinationUser.getServer());
 			InetAddress destinationIP = null;
 			int         destinationPort = 0;
 			
@@ -313,16 +327,18 @@ public class Server
 			//if the destination is connected to another server
 			else
 			{
-				for(UserNetworkInfo curServer : connectedServers)
-				{
-//					if(curServer.getServer().getUsername().equals(destinationUser.getServer().getUsername()))
-					if(destinationUser.getServer().getUsername().equals(curServer.getUser().getUsername()))
-					{
-						destinationIP = curServer.getIpAddress();
-						destinationPort = curServer.getPort();
-						break;
-					}
-				}
+//				for(UserNetworkInfo curServer : connectedServers)
+//				{
+////					if(curServer.getServer().getUsername().equals(destinationUser.getServer().getUsername()))
+//					if(destinationUser.getServer().getUsername().equals(curServer.getUser().getUsername()))
+//					{
+//						destinationIP = curServer.getIpAddress();
+//						destinationPort = curServer.getPort();
+						destinationIP = destinationServer.getIpAddress();
+						destinationPort = destinationServer.getPort();
+//						break;
+//					}
+//				}
 			}
 			
 			DatagramPacket sendPacket = new DatagramPacket(sendData,
@@ -544,6 +560,7 @@ public class Server
 		System.out.println("\t\tTo: " + message.getDestination().getUsername());
 		System.out.println("\t\tContent: " + message.getPayload().toString());
 		System.out.println("\t\tSequence number: " + message.getSequenceNumber());
+		System.out.println("\t\tDestination Server: " + this.getClient(message.getDestination()).getServer().getUsername());
 		
 		boolean thisServer = false;
 //		for(UserNetworkInfo curClient : connectedUsers)
@@ -604,9 +621,9 @@ public class Server
 		//remove it from messageBuffer and place it in GET_MessageBuffer
 		//send the messages destined to client B from GET_MessageBuffer
 		
-		System.out.println("------------------------------------------------------------");
-		System.out.println(serverUser.getUser().getUsername() + " > GET from: '" + message.getSource()
-			.getUsername() + "'");
+//		System.out.println("------------------------------------------------------------");
+//		System.out.println(serverUser.getUser().getUsername() + " > GET from: '" + message.getSource()
+//			.getUsername() + "'");
 		
 		//using a new thread in case there's multiple messages that needs to be sent
 		Runnable tempThread = () ->
@@ -634,14 +651,14 @@ public class Server
 				//  payload: text message
 				//  NOTE: sequence number is embedded.
 				
-				System.out.println("\n" + serverUser.getUser().getUsername() + " > Sending GET to " + GET_MessageBuffer.get(
-					i).getDestination().getUsername());
+//				System.out.println("\n" + serverUser.getUser().getUsername() + " > Sending GET to " + GET_MessageBuffer.get(
+//					i).getDestination().getUsername());
 				
 				Message getMessage = GET_MessageBuffer.get(i);
 				getMessage.setMessageType(MessageType.GET);
 
 				this.sendMessage(getMessage);
-				System.out.println(serverUser.getUser().getUsername() + " > GET request sent");
+//				System.out.println(serverUser.getUser().getUsername() + " > GET request sent");
 				
 			}//END for (int i = 0; i < GET_MessageBuffer.size(); i++)
 			
@@ -653,7 +670,7 @@ public class Server
 			
 		}//END if(messageBuffer.size() > 0)
 		
-		System.out.println("------------------------------------------------------------");
+//		System.out.println("------------------------------------------------------------");
 		
 	}//END METHOD handleGET_message(Message)
 	
@@ -755,15 +772,23 @@ public class Server
 			{
 				System.out.println(serverUser.getUser().getUsername() + " > User already exists");
 				userExists = true;
-				break;
+				return;
 			}
 			
 		}
 		
 		//if it's a new user.
-		if(!userExists)
-		{
+//		if(!userExists)
+//		{
+			UserNetworkInfo server = this.getServer(newUser.getServer());
+			if(server == null)
+			{
+				System.out.println("null-------------------");
+				newUser.setServer(message.getSource());
+			}
+			
 			connectedUsers.add(newUser);
+			System.out.println(serverUser.getUser().getUsername() + " > User added");
 			
 			//tell all clients connected to the server
 			if (connectedUsers.size() >= 2)
@@ -785,10 +810,22 @@ public class Server
 			
 			if(connectedServers.size() > 0)
 			{
-				
+				for(UserNetworkInfo curServer : connectedServers)
+				{
+					if(curServer.getUser().getUsername().equals(message.getSource().getUsername()))
+					{
+						continue;
+					}
+					
+					Message newClientMessage = new Message(MessageType.USERS,
+					                                       serverUser.getUser(),
+					                                       curServer.getUser(),
+					                                       newUser);
+					this.sendServerMessage(newClientMessage);
+				}
 			}
 			
-		}
+//		}
 		
 		System.out.println("------------------------------------------------------------");
 		
@@ -904,7 +941,7 @@ public class Server
 			//todo do you need broadcastUser(Message) and broadcastUserList(Message)? use one method to send the info to everyone.
 			
 		}
-		
+		System.out.println("--------------------------server.getUser: " + serverUser.getUser().getUsername());
 		clientIPInfo.setServer(serverUser.getUser());
 		
 		for(UserNetworkInfo curServer : connectedServers)
@@ -1275,6 +1312,50 @@ public class Server
 			System.out.println("No servers connected.");
 		}
 		
+		System.out.println("------------------------------------------------------------");
+	}
+	
+	public void printClients()
+	{
+		System.out.println("------------------------------------------------------------");
+		
+		if (connectedUsers.size() > 0)
+		{
+			for(UserNetworkInfo curClient : connectedUsers)
+			{
+				System.out.println("Client name: " + curClient.getUser().getUsername());
+				System.out.println("\t\tServer: " + curClient.getServer().getUsername());
+				
+				if(curClient.getServer().getUsername().equals(serverUser.getUser().getUsername()))
+				{
+					System.out.println("\t\tServer IP: " + serverUser.getIpAddress().getHostAddress());
+					System.out.println("\t\tServer port: " + serverUser.getPort());
+				}
+				
+				else if(this.getServer(curClient.getServer()) != null)
+				{
+					UserNetworkInfo serverInfo = this.getServer(curClient.getServer());
+					System.out.println("\t\tServer IP: " + serverInfo.getIpAddress().getHostAddress());
+					System.out.println("\t\tServer port: " + serverInfo.getPort());
+				}
+				
+			}
+		}
+		
+		else
+		{
+			System.out.println("No clients connected. ");
+		}
+		
+		System.out.println("------------------------------------------------------------");
+	}
+	
+	public void whoami()
+	{
+		System.out.println("------------------------------------------------------------");
+		System.out.println("Server name: " + serverUser.getUser().getUsername());
+		System.out.println("IP address: " + serverUser.getIpAddress().getHostAddress());
+		System.out.println("Port: " + serverUser.getPort());
 		System.out.println("------------------------------------------------------------");
 	}
 	
