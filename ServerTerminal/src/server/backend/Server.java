@@ -1166,7 +1166,8 @@ public class Server
 		{
 //			if(curServer.getUser().getUsername().equals(message.getSource().getUsername()))
 //			if(curServer.getIpAddress().equals(ackServer.getIpAddress()))
-			if(curServer.getIpAddress().getHostAddress().equals(ackServer.getIpAddress().getHostAddress()))
+			if(curServer.getIpAddress().getHostAddress().equals(ackServer.getIpAddress().getHostAddress()) &&
+				curServer.getPort() == ackServer.getPort())
 			{
 //				User newServer = (User) message.getPayload();
 				System.out.println(serverUser.getUser().getUsername() + " > User object set");
