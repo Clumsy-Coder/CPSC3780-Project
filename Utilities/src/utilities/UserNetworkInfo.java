@@ -99,7 +99,7 @@ public class UserNetworkInfo implements Serializable
 	
 	/**
 	 * Sets the server associated with the client. Only used for clients
-	 * @param server
+	 * @param server Information about the server
 	 */
 	public void setServer(@NotNull User server)
 	{
@@ -108,8 +108,8 @@ public class UserNetworkInfo implements Serializable
 	}//END METHOD setServer(User)
 	
 	/**
-	 *
-	 * @param user
+	 * Sets the User object
+	 * @param user Information about the User
 	 */
 	public void setUser(@NotNull User user)
 	{
