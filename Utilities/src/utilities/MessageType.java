@@ -33,10 +33,12 @@ public enum MessageType
 	/**
 	 * When a new new server is connected to the existing server.
 	 */
-	NEW_SERVER,
+	SERVER_CONNECT,
 	/**
 	 * When a server is disconnecting
 	 */
-	SERVER_DISCONNECT
+	SERVER_DISCONNECT,
+	
+	ACK_SERVER_CONNECT
 	
 }//END ENUM MessageType
