@@ -139,4 +139,14 @@ public class Message implements Serializable
 		
 	}//END METHOD setMessageType(MessageType)
 	
+	/**
+	 * Set the payload
+	 * @param payload The object being set
+	 */
+	public void setPayload(@NotNull Object payload)
+	{
+		this.payload = payload;
+		
+	}//END METHOD setPayload(Object)
+	
 }//END CLASS Message
