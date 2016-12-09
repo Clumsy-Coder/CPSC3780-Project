@@ -76,8 +76,7 @@ public class Server
 	private ListenServer            serverListen;
 	
 	/**
-	 * Server starts in serverPort 5555
-	 *
+	 * Initialize the server at port 5555
 	 * @param username The username of the server
 	 */
 	Server(String username)
@@ -117,7 +116,6 @@ public class Server
 	}//END CONSTRUCTOR Server(String, serverPort)
 	/**
 	 * Initializes the server, start the server and connects to another server.
-	 *
 	 * @param username           The username of the server
 	 * @param serverPort         Port number for the server to use
 	 * @param connectingServerIP IP address for the server to connect
@@ -191,7 +189,6 @@ public class Server
 	}//END METHOD stopServer()
 	/**
 	 * Used for sending user info to all connected clients.
-	 *
 	 * @param message Message to send.
 	 */
 	private synchronized void broadcastUser(@NotNull Message message)
@@ -214,10 +211,9 @@ public class Server
 		}//END for (UserNetworkInfo curClient : connectedUsers)
 	}//END METHOD broadcastUser(Message)
 	/**
-	 * Returns the user network info of the specified user.
-	 *
-	 * @param user The user being searched for
-	 * @return UserNetworkInfo if found. null otherwise.
+	 * Returns the UserNetworkInfo of the specified client.
+	 * @param user The client being searched for
+	 * @return UserNetworkInfo if found. NULL otherwise.
 	 */
 	private synchronized UserNetworkInfo getClient(@NotNull User user)
 	{
@@ -239,7 +235,11 @@ public class Server
 		}//END for (int i = 0; i < connectedUsers.size(); i++)
 		return connectedClient;
 	}//END METHOD getClient(User)
-	
+	/**
+	 * Gets the server info based on the parameter
+	 * @param server The server to search
+	 * @return UserNetworkInfo if found, NULL otherwise
+	 */
 	private synchronized UserNetworkInfo getServer(@NotNull User server)
 	{
 		for (UserNetworkInfo curServer : connectedServers)
@@ -253,7 +253,6 @@ public class Server
 	}//END METHOD getServer(User)
 	/**
 	 * Used for removing a client from the list of connected users
-	 *
 	 * @param user Client to remove
 	 */
 	private synchronized void removeClient(@NotNull User user)
@@ -275,7 +274,6 @@ public class Server
 	}//END METHOD removeClient(User)
 	/**
 	 * Sending a message to a client as UDP packet.
-	 *
 	 * @param sendMessage The message to be sent.
 	 */
 	private synchronized void sendMessage(@NotNull Message sendMessage)
@@ -293,7 +291,6 @@ public class Server
 			InetAddress     destinationIP     = null;
 			int             destinationPort   = 0;
 			
-			//todo check the new send message is working. NOTE: possible null values
 			//check if the destination is connected to this server.
 			if (destinationUser.getServer().getUsername().equals(serverUser.getUser().getUsername()))
 			{
@@ -332,7 +329,6 @@ public class Server
 	
 	/**
 	 * Sending a message to another server as a UDP packet
-	 *
 	 * @param message Message to be sent
 	 */
 	private synchronized void sendServerMessage(@NotNull Message message)
@@ -375,7 +371,6 @@ public class Server
 	/**
 	 * Reading incoming messages.
 	 * The method will hold until a packet is received.
-	 *
 	 * @return The message that was read.
 	 */
 	private Message readMessage()
@@ -409,10 +404,9 @@ public class Server
 	}//END METHOD readMessage()
 	/**
 	 * Sends connected Users to the server
-	 *
+	 * Sends all the connected clients on this server to a server
 	 * @param message Message being sent. Must contain destination
 	 */
-	//todo implement broadcastUserList method
 	private synchronized void broadcastUserList(@NotNull Message message)
 	{
 		//iterate through the connectedUsers
@@ -433,11 +427,11 @@ public class Server
 		}
 	}//END METHOD broadcasrUserList(Message)
 	
-	//todo implement connectServer(String, int)
 	/**
 	 * Connect to another server.
 	 * Sends a CONNECT_SERVER message to the destination.
-	 *
+	 * Waits for a ACK_SERVER_CONNECT message to complete the
+	 * server connection.
 	 * @param ipAddress The IP address to send to
 	 * @param port      Port number of the destination server
 	 */
@@ -489,9 +483,11 @@ public class Server
 		}//END CATCH BLOCK IOException
 	}//END METHOD connectServer(String, int)
 	/**
-	 * Handles messages that have SEND message type
-	 *
-	 * @param message Message to handle
+	 * Handles a SEND message from a client.
+	 * The server checks if the destination is connected to this server, if true
+	 * , then store it in the message buffer, otherwise send it to the
+	 * server that has the client connected to it (directly connected)
+	 * @param message The message to process
 	 */
 	private final synchronized void handleSEND_message(@NotNull Message message)
 	{
@@ -543,9 +539,9 @@ public class Server
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD handleSEND_message(Message)
 	/**
-	 * Handles messages that have GET message type
-	 *
-	 * @param message Message to handle
+	 * Handles a GET message from a client that is attempting to retrieve messages that is
+	 * destined to it.
+	 * @param message The message to process
 	 */
 	private final synchronized void handleGET_message(@NotNull Message message)
 	{
@@ -601,8 +597,8 @@ public class Server
 	}//END METHOD handleGET_message(Message)
 	/**
 	 * Handles messages that have ACK message type
-	 *
-	 * @param message Message to handle
+	 * Handles a ACK message from a client that is acknowledging a message.
+	 * @param message The message to process
 	 */
 	private final synchronized void handleACK_message(@NotNull Message message)
 	{
@@ -649,10 +645,10 @@ public class Server
 	}//END METHOD handleACK_message(Message)
 	/**
 	 * Handles messages that have USERS message type
-	 *
-	 * @param message Message to handle
+	 * Handles a USERS message from a server which telling which client has connected to the server
+	 * (NOT this server)
+	 * @param message The message to process
 	 */
-	//todo implement handleUSERS_message(Message)
 	private final synchronized void handleUSERS_message(@NotNull Message message)
 	{
 		System.out.println("------------------------------------------------------------");
@@ -733,9 +729,8 @@ public class Server
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD handleUSERS_message(Message)
 	/**
-	 * Handles messages that have CONNECT message type
-	 *
-	 * @param message Message to handle
+	 * Handles a CONNECT message from a client that is attempting to connect to this server
+	 * @param message The message to process
 	 */
 	private final synchronized void handleCONNECT_message(Message message)
 	{
@@ -771,7 +766,6 @@ public class Server
 		System.out.println(serverUser.getUser()
 			                   .getUsername() + " > User: '" + user.getUsername() + "' is now CONNECTED");
 		System.out.println("\t\tsequence number: " + user.getSequenceNumber());
-		//todo tell the newly connected client who is currently connected
 		for (UserNetworkInfo connectedUser : connectedUsers)
 		{
 			Message broadcastMessage = new Message(MessageType.USERS,
@@ -800,7 +794,6 @@ public class Server
 				
 			}//END CATCH BLOCK IOException
 		}//END for (UserNetworkInfo connectedUser : connectedUsers)
-		//TODO implement broadcast the newly added user to everyone
 		//let everyone connected to the server know that a new user has connected to the server.
 		//connectedUsers.size() + 1 because you don't want to broadcast to the original sender.
 		//  the original sender would think that's a new user.
@@ -836,8 +829,6 @@ public class Server
 			                                serverUser.getUser(),
 			                                curServer.getUser(),
 			                                clientIPInfo);
-			
-			//todo test sending client info to another server when a client connects to the server
 			this.sendServerMessage(serverMsg);
 		}//END for (UserNetworkInfo curServer : connectedServers)
 		connectedUsers.add(clientIPInfo);
@@ -845,9 +836,8 @@ public class Server
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD handleCONNECT_message(Message)
 	/**
-	 * Handles messages that have DISCONNECT message type
-	 *
-	 * @param message Message to handle
+	 * Handles a DISCONNECT message from a client which is disconnecting from this server
+	 * @param message The message to process
 	 */
 	private final synchronized void handleDISCONNECT_message(Message message)
 	{
@@ -876,7 +866,6 @@ public class Server
 		System.out.println(serverUser.getUser()
 			                   .getUsername() + " > User: '" + user.getUsername() + "' is now DISCONNECTED");
 		//broadcast the connectUser vector to all connected users/server
-		//TODO implement broadcast the updated userList vector to everyone
 		//let everyone know who just disconnected
 		if (connectedUsers.size() >= 1)
 		{
@@ -913,7 +902,10 @@ public class Server
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD handleDISCONNECT_message(Message)
 	
-	//todo implement handleSERVER_CONNECT_message(Message)
+	/**
+	 * Handles a CONNECT_SERVER message from a server which is attempting to connect
+	 * @param message The message to process
+	 */
 	private final synchronized void handleSERVER_CONNECT_message(Message message)
 	{
 		//create a new UserNetworkInfo
@@ -950,11 +942,13 @@ public class Server
 			this.broadcastUserList(userMessage);
 		};
 		new Thread(userThread).start();
-		//todo handleServerConnect_message(Message) tell the new server who is connected.
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD handleSERVER_CONNECT_message(Message)
 	
-	//todo implement handleSERVER_DISCONNECT(Message)
+	/**
+	 * Handles a SERVER_DISCONNECT message from a server who is disconnecting this server
+	 * @param message The message to process
+	 */
 	private final synchronized void handleSERVER_DISCONNECT(Message message)
 	{
 		//find the server disconnecting
@@ -975,7 +969,10 @@ public class Server
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD handleSERVER_DISCONNECT(Message)
 	
-	//todo implement handleACK_SERVER_CONNECT_message(Message)
+	/**
+	 * Handles a ACK message from a server who is connecting to this server
+	 * @param message The message to process
+	 */
 	private final synchronized void handleACK_SERVER_CONNECT_message(Message message)
 	{
 		//message content
@@ -1018,11 +1015,8 @@ public class Server
 		new Thread(userThread).start();
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD handleACK_SERVER_CONNECT_message(Message)
-	
 	/**
-	 * Receives the message and calls the appropiate method to
-	 * handle the message
-	 *
+	 * Receives the message and calls the appropriate method to handle the message
 	 * @param message Message received.
 	 */
 	private synchronized void handleMessage(Message message)
@@ -1109,7 +1103,9 @@ public class Server
 			}//END CASE default
 		}//END switch(message.getMessageType)
 	}//END METHOD handleMessage(Message)
-	
+	/**
+	 * Display information about servers connected to this server
+	 */
 	public void printServers()
 	{
 		System.out.println("------------------------------------------------------------");
@@ -1128,7 +1124,9 @@ public class Server
 		}//END ELSE FOR if (connectedServers.size() > 0)
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD printServers()
-	
+	/**
+	 * Display information about clients connected to the server.
+	 */
 	public void printClients()
 	{
 		System.out.println("------------------------------------------------------------");
@@ -1158,7 +1156,9 @@ public class Server
 		}//END if (connectedUsers.size() > 0)
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD printClients()
-	
+	/**
+	 * Display information about this server.
+	 */
 	public void whoami()
 	{
 		System.out.println("------------------------------------------------------------");
@@ -1167,7 +1167,9 @@ public class Server
 		System.out.println("Port: " + serverUser.getPort());
 		System.out.println("------------------------------------------------------------");
 	}//END METHOD whoami()
-	
+	/**
+	 * Inner class used for listening incoming messages. Runs on a seperate thread.
+	 */
 	private class ListenServer extends Thread
 	{
 		public void run()
